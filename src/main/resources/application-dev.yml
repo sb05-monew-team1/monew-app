@@ -1,0 +1,5 @@
+management:
+  endpoint:
+    web:
+      exposure:
+        include: health,info,metrics
