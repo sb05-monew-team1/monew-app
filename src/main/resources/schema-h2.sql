@@ -14,10 +14,10 @@ CREATE TABLE users
     email              varchar(320) NOT NULL UNIQUE,
     nickname           varchar(20)  NOT NULL,
     password           varchar(20)  NOT NULL,
-    created_at         timestamptz  NOT NULL DEFAULT now(),
-    updated_at         timestamptz  NOT NULL DEFAULT now(),
-    deleted_at         timestamptz,
-    purge_scheduled_at timestamptz
+    created_at         timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at         timestamp with time zone NOT NULL DEFAULT now(),
+    deleted_at         timestamp with time zone,
+    purge_scheduled_at timestamp with time zone
 );
 
 CREATE UNIQUE INDEX users_nickname_unq ON users (nickname);
@@ -27,29 +27,29 @@ CREATE TABLE interests
     id               uuid PRIMARY KEY,
     name             varchar(50) NOT NULL,
     subscriber_count bigint      NOT NULL DEFAULT 0,
-    created_at       timestamptz NOT NULL DEFAULT now(),
-    updated_at       timestamptz NOT NULL DEFAULT now()
+    created_at       timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at       timestamp with time zone NOT NULL DEFAULT now()
 );
 
-CREATE UNIQUE INDEX interests_name_unq ON interests (lower(name));
+CREATE UNIQUE INDEX interests_name_unq ON interests (name);
 
 CREATE TABLE interest_keywords
 (
     id          uuid PRIMARY KEY,
     interest_id uuid         NOT NULL REFERENCES interests (id) ON DELETE CASCADE,
     keyword     varchar(100) NOT NULL,
-    created_at  timestamptz  NOT NULL DEFAULT now()
+    created_at  timestamp with time zone NOT NULL DEFAULT now()
 );
 
 CREATE UNIQUE INDEX interest_keywords_interest_keyword_unq
-    ON interest_keywords (interest_id, lower(keyword));
+    ON interest_keywords (interest_id, keyword);
 
 CREATE TABLE interest_subscriptions
 (
     id          uuid PRIMARY KEY,
     interest_id uuid        NOT NULL REFERENCES interests (id) ON DELETE CASCADE,
     user_id     uuid        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    created_at  timestamptz NOT NULL DEFAULT now()
+    created_at  timestamp with time zone NOT NULL DEFAULT now()
 );
 
 CREATE UNIQUE INDEX interest_subscriptions_user_interest_unq
@@ -61,14 +61,14 @@ CREATE TABLE articles
     source        varchar(20)  NOT NULL,
     source_url    varchar(500) NOT NULL UNIQUE,
     title         varchar(500) NOT NULL,
-    publish_date  timestamptz  NOT NULL,
+    publish_date  timestamp with time zone NOT NULL,
     summary       varchar(500),
     comment_count bigint       NOT NULL DEFAULT 0,
     view_count    bigint       NOT NULL DEFAULT 0,
-    collected_at  timestamptz  NOT NULL DEFAULT now(),
-    created_at    timestamptz  NOT NULL DEFAULT now(),
-    updated_at    timestamptz  NOT NULL DEFAULT now(),
-    deleted_at    timestamptz
+    collected_at  timestamp with time zone NOT NULL DEFAULT now(),
+    created_at    timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at    timestamp with time zone NOT NULL DEFAULT now(),
+    deleted_at    timestamp with time zone
 );
 
 CREATE INDEX articles_publish_date_idx ON articles (publish_date DESC);
@@ -80,8 +80,8 @@ CREATE TABLE article_views
     id              uuid PRIMARY KEY,
     article_id      uuid        NOT NULL REFERENCES articles (id) ON DELETE CASCADE,
     user_id         uuid        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    first_viewed_at timestamptz NOT NULL DEFAULT now(),
-    last_viewed_at  timestamptz NOT NULL DEFAULT now()
+    first_viewed_at timestamp with time zone NOT NULL DEFAULT now(),
+    last_viewed_at  timestamp with time zone NOT NULL DEFAULT now()
 );
 
 CREATE UNIQUE INDEX article_views_article_user_unq
@@ -94,9 +94,9 @@ CREATE TABLE comments
     article_id uuid         NOT NULL REFERENCES articles (id) ON DELETE CASCADE,
     content    varchar(500) NOT NULL,
     like_count bigint       NOT NULL DEFAULT 0,
-    created_at timestamptz  NOT NULL DEFAULT now(),
-    updated_at timestamptz  NOT NULL DEFAULT now(),
-    deleted_at timestamptz
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at timestamp with time zone NOT NULL DEFAULT now(),
+    deleted_at timestamp with time zone
 );
 
 CREATE INDEX comments_article_created_idx
@@ -107,7 +107,7 @@ CREATE TABLE comment_likes
     id         uuid PRIMARY KEY,
     user_id    uuid        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     comment_id uuid        NOT NULL REFERENCES comments (id) ON DELETE CASCADE,
-    created_at timestamptz NOT NULL DEFAULT now()
+    created_at timestamp with time zone NOT NULL DEFAULT now()
 );
 
 CREATE UNIQUE INDEX comment_likes_comment_user_unq
@@ -121,10 +121,10 @@ CREATE TABLE notifications
     content       varchar(500) NOT NULL,
     resource_type varchar(20)  NOT NULL,
     resource_id   uuid         NOT NULL,
-    created_at    timestamptz  NOT NULL DEFAULT now(),
-    updated_at    timestamptz  NOT NULL DEFAULT now()
+    created_at    timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at    timestamp with time zone NOT NULL DEFAULT now()
 );
 
+-- H2는 부분 인덱스를 지원하지 않으므로 전체 열에 대한 인덱스로 대체
 CREATE INDEX notifications_user_confirmed_idx
-    ON notifications (user_id, created_at DESC)
-    WHERE confirmed = false;
+    ON notifications (user_id, confirmed, created_at DESC);

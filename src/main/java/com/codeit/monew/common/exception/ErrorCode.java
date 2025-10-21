@@ -9,8 +9,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum ErrorCode {
 
-
-	INTERNAL_SERVER_ERROR("서버 내부 오류가 발생했습니다.",  HttpStatus.INTERNAL_SERVER_ERROR),
+	INTERNAL_SERVER_ERROR("서버 내부 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
 	;
 
 	private final String message;
