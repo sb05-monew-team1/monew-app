@@ -22,21 +22,6 @@ jobs:
           cache: gradle
       - run: ./gradlew clean test jacocoTestReport
 
-      # PR일 때만 PR 파라미터 포함
-      - name: SonarCloud Scan (PR)
-        if: github.event_name == 'pull_request'
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          ./gradlew sonar \
-            -Dsonar.organization=sb05-monew-team1 \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=${{ env.SONAR_TOKEN }} \
-            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
-            -Dsonar.pullrequest.branch=${{ github.head_ref }} \
-            -Dsonar.pullrequest.base=${{ github.base_ref }}
-
-      # push 빌드(메인)에선 PR 파라미터 빼기
       - name: SonarCloud Scan (push)
         if: github.event_name != 'pull_request'
         env:
@@ -44,5 +29,22 @@ jobs:
         run: |
           ./gradlew sonar \
             -Dsonar.organization=sb05-monew-team1 \
+            -Dsonar.projectKey=sb05-monew-team1:monew-app \
+            -Dsonar.projectName=monew-app \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=${{ env.SONAR_TOKEN }}
+
+      - name: SonarCloud Scan (PR)
+        if: github.event_name == 'pull_request'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          ./gradlew sonar \
+            -Dsonar.organization=sb05-monew-team1 \
+            -Dsonar.projectKey=sb05-monew-team1:monew-app \
+            -Dsonar.projectName=monew-app \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.login=${{ env.SONAR_TOKEN }} \
+            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
+            -Dsonar.pullrequest.branch=${{ github.head_ref }} \
+            -Dsonar.pullrequest.base=${{ github.base_ref }}
