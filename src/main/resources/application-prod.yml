@@ -1,7 +1,11 @@
+logging:
+  level:
+    root: INFO
+    com.monew: INFO
 management:
-  endpoint:
+  endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info   # prod는 보수적으로
   server:
     port: 8080
