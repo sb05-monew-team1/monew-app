@@ -1,7 +1,7 @@
 logging:
   level:
     root: INFO
-    com.monew: INFO
+    com.codeit.monew: INFO
 management:
   endpoints:
     web:
