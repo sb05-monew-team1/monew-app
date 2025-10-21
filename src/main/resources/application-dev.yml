@@ -1,8 +1,9 @@
-spring:
-profiles:
-active: dev
-
 logging:
-level:
-root: DEBUG
-com.yourapp: DEBUG
+  level:
+    root: DEBUG
+    com.codeit.monew: DEBUG
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,loggers  # dev에선 loggers 등 노출 허용
