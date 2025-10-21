@@ -1,5 +1,9 @@
+logging:
+  level:
+    root: DEBUG
+    com.codeit.monew: DEBUG
 management:
-  endpoint:
+  endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,loggers  # dev에선 loggers 등 노출 허용
