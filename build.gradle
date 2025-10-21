@@ -86,11 +86,3 @@ sourceSets {
     main { java { srcDirs += qGenerated.get().asFile } }
 }
 
-sonarqube {
-    properties {
-        property 'sonar.coverage.jacoco.xmlReportPaths',
-                layout.buildDirectory.file('reports/jacoco/test/jacocoTestReport.xml').get().asFile.path
-        property 'sonar.exclusions',
-                '**/generated/**, **/Q**.java, **/build/**, **/*MapperImpl.java, **/config/**/Test*/**, **/fixture/**'
-    }
-}
