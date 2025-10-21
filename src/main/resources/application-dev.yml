@@ -1,5 +1,8 @@
-management:
-  endpoint:
-    web:
-      exposure:
-        include: health,info,metrics
+spring:
+profiles:
+active: dev
+
+logging:
+level:
+root: DEBUG
+com.yourapp: DEBUG
