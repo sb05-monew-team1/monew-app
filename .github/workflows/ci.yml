@@ -14,6 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }  # PR 비교 위해 전체 히스토리 유리
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -21,15 +22,27 @@ jobs:
           cache: gradle
       - run: ./gradlew clean test jacocoTestReport
 
-      # SonarCloud인 경우
-      - name: SonarCloud Scan
+      # PR일 때만 PR 파라미터 포함
+      - name: SonarCloud Scan (PR)
+        if: github.event_name == 'pull_request'
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: https://sonarcloud.io
-        run: ./gradlew sonar \
-          -Dsonar.organization=your-org \
-          -Dsonar.host.url=${{ env.SONAR_HOST_URL }} \
-          -Dsonar.login=${{ env.SONAR_TOKEN }} \
-          -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
-          -Dsonar.pullrequest.branch=${{ github.head_ref }} \
-          -Dsonar.pullrequest.base=${{ github.base_ref }}
+        run: |
+          ./gradlew sonar \
+            -Dsonar.organization=sb05-monew-team1 \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.login=${{ env.SONAR_TOKEN }} \
+            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
+            -Dsonar.pullrequest.branch=${{ github.head_ref }} \
+            -Dsonar.pullrequest.base=${{ github.base_ref }}
+
+      # push 빌드(메인)에선 PR 파라미터 빼기
+      - name: SonarCloud Scan (push)
+        if: github.event_name != 'pull_request'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          ./gradlew sonar \
+            -Dsonar.organization=sb05-monew-team1 \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.login=${{ env.SONAR_TOKEN }}
