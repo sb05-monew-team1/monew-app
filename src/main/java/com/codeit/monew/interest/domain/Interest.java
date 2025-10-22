@@ -1,40 +1,28 @@
 package com.codeit.monew.interest.domain;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
-import org.hibernate.annotations.UuidGenerator;
+import com.codeit.monew.common.base.BaseUpdatableDomain;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 @Getter
-@Builder
+@SuperBuilder
 @Entity
 @Table(name = "interests")
 @AllArgsConstructor
 @NoArgsConstructor
-public class Interest {
-
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	@UuidGenerator
-	@Column(name = "id")
-	private UUID id;
+public class Interest extends BaseUpdatableDomain {
 
 	@Column(name = "name")
 	private String name;
@@ -42,33 +30,11 @@ public class Interest {
 	@Column(name = "subscriber_count")
 	private Long subscriberCount;
 
-	@Column(name = "created_at")
-	private LocalDateTime createdAt;
-
-	@Column(name = "updated_at")
-	private LocalDateTime updatedAt;
-
+	@Builder.Default
 	@OneToMany(mappedBy = "interest", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<InterestKeyword> keywords = new ArrayList<>();
 
+	@Builder.Default
 	@OneToMany(mappedBy = "interest")
 	private List<InterestSubscription> subscriptions = new ArrayList<>();
-
-	@PrePersist
-	protected void onCreate() {
-		if (keywords == null) {
-			keywords = new ArrayList<>();
-		}
-		if (subscriptions == null) {
-			subscriptions = new ArrayList<>();
-		}
-
-		createdAt = LocalDateTime.now();
-		updatedAt = LocalDateTime.now();
-	}
-
-	@PreUpdate
-	protected void onUpdate() {
-		updatedAt = LocalDateTime.now();
-	}
 }
