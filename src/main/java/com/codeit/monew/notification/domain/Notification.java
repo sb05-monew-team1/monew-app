@@ -2,7 +2,7 @@ package com.codeit.monew.notification.domain;
 
 import java.util.UUID;
 
-import javax.management.NotificationListener;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import com.codeit.monew.common.base.BaseUpdatableDomain;
 import com.codeit.monew.user.domain.User;
@@ -23,7 +23,7 @@ import lombok.Setter;
 @Table(name = "notifications")
 @Getter
 @Setter
-@EntityListeners(NotificationListener.class)
+@EntityListeners(AuditingEntityListener.class)
 @AllArgsConstructor
 @NoArgsConstructor
 public class Notification extends BaseUpdatableDomain {

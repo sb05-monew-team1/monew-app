@@ -1,12 +1,12 @@
 package com.codeit.monew.notification.dto;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 public record NotificationDto(
 	UUID id,
-	LocalDateTime createdAt,
-	LocalDateTime updatedAt,
+	Instant createdAt,
+	Instant updatedAt,
 	UUID userId,
 	String content,
 	String resourceType,
