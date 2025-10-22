@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.codeit.monew.article.domain.Article;
 
-public interface ArticleRepository extends JpaRepository<Article, UUID> {
+public interface ArticleRepository extends JpaRepository<Article, UUID>, ArticleQueryRepository {
 }
