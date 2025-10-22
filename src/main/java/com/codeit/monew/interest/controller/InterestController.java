@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import com.codeit.monew.interest.dto.InterestRegisterRequest;
-import com.codeit.monew.interest.dto.InterestResponse;
+import com.codeit.monew.interest.dto.InterestDto;
 import com.codeit.monew.interest.service.InterestService;
 
 import jakarta.validation.Valid;
@@ -25,10 +25,10 @@ public class InterestController {
 	 * 관심사 등록
 	 */
 	@PostMapping
-	public ResponseEntity<InterestResponse> createInterest(
+	public ResponseEntity<InterestDto> createInterest(
 		@Valid @RequestBody InterestRegisterRequest request
 	) {
-		InterestResponse response = interestService.createInterest(request);
+		InterestDto response = interestService.createInterest(request);
 		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 
