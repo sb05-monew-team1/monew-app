@@ -61,6 +61,9 @@ dependencies {
 
     // AWS
     implementation 'software.amazon.awssdk:s3:2.31.7'
+
+    // 문자열 유사도 측정 라이브러리
+    implementation 'org.apache.commons:commons-text:1.10.0'
 }
 
 tasks.test {
