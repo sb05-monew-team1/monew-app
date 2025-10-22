@@ -2,6 +2,7 @@ DROP TABLE IF EXISTS comment_likes;
 DROP TABLE IF EXISTS notifications;
 DROP TABLE IF EXISTS article_views;
 DROP TABLE IF EXISTS comments;
+DROP TABLE IF EXISTS article_interests;
 DROP TABLE IF EXISTS articles;
 DROP TABLE IF EXISTS interest_subscriptions;
 DROP TABLE IF EXISTS interest_keywords;
@@ -74,6 +75,15 @@ CREATE TABLE articles
 CREATE INDEX articles_publish_date_idx ON articles (publish_date DESC);
 CREATE INDEX articles_comment_count_idx ON articles (comment_count DESC);
 CREATE INDEX articles_view_count_idx ON articles (view_count DESC);
+
+CREATE TABLE article_interests
+(
+    article_id  uuid NOT NULL,
+    interest_id uuid NOT NULL,
+    PRIMARY KEY (article_id, interest_id),
+    FOREIGN KEY (article_id) REFERENCES articles (id) ON DELETE CASCADE,
+    FOREIGN KEY (interest_id) REFERENCES interests (id) ON DELETE CASCADE
+);
 
 CREATE TABLE article_views
 (
