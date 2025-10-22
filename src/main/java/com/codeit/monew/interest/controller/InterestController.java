@@ -7,8 +7,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-import com.codeit.monew.interest.dto.InterestRegisterRequest;
 import com.codeit.monew.interest.dto.InterestDto;
+import com.codeit.monew.interest.dto.InterestRegisterRequest;
 import com.codeit.monew.interest.service.InterestService;
 
 import jakarta.validation.Valid;

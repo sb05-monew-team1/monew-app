@@ -10,7 +10,7 @@ public record CursorPageResponse<T>(
 	String nextCursor,
 	String nextAfter,
 	int size,
-	int totalElements,
+	long totalElements,
 	boolean hasNext
 ) {
 }
