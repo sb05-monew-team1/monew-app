@@ -1,6 +1,13 @@
 package com.codeit.monew.common.dto;
 
-public record CursorPageResponse(
+import java.util.List;
 
+public record CursorPageResponse<T>(
+	List<T> content,
+	String nextCursor,
+	String nextAfter,
+	int size,
+	int totalElements,
+	boolean hasNext
 ) {
 }
