@@ -8,23 +8,24 @@ import org.springframework.transaction.annotation.Transactional;
 import com.codeit.monew.interest.domain.Interest;
 import com.codeit.monew.interest.domain.InterestKeyword;
 import com.codeit.monew.interest.dto.InterestRegisterRequest;
-import com.codeit.monew.interest.dto.InterestResponse;
+import com.codeit.monew.interest.dto.InterestDto;
+import com.codeit.monew.interest.mapper.InterestMapper;
 import com.codeit.monew.interest.repository.InterestRepository;
 
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class InterestService {
 
 	private final InterestRepository interestRepository;
+	private final InterestMapper interestMapper;
 
 	/**
 	 * 관심사 등록
 	 */
 	@Transactional
-	public InterestResponse createInterest(InterestRegisterRequest request) {
+	public InterestDto createInterest(InterestRegisterRequest request) {
 		Interest interest = Interest.builder()
 			.name(request.name())
 			.subscriberCount(0L)
@@ -41,6 +42,6 @@ public class InterestService {
 
 		Interest savedInterest = interestRepository.save(interest);
 
-		return InterestResponse.from(savedInterest);
+		return interestMapper.toDto(savedInterest, false);
 	}
 }
