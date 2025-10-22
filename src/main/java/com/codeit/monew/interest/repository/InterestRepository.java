@@ -1,4 +1,14 @@
 package com.codeit.monew.interest.repository;
 
-public interface InterestRepository {
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
+import com.codeit.monew.interest.domain.Interest;
+
+public interface InterestRepository extends JpaRepository<Interest, UUID> {
+	@Query("SELECT i.name FROM Interest i")
+	List<String> findAllNames();
 }
