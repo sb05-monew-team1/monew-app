@@ -14,6 +14,4 @@ public interface UserRepository extends JpaRepository<User, Long> {
   boolean existsByEmail(String email);
 
   //닉네임 수정시 중복 검사 (프로토타입엔 없음)
-
-
 }
