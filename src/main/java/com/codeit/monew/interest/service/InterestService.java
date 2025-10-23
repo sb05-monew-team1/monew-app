@@ -2,6 +2,8 @@ package com.codeit.monew.interest.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.UUID;
 
 import org.apache.commons.text.similarity.JaroWinklerSimilarity;
 import org.springframework.stereotype.Service;
@@ -51,6 +53,18 @@ public class InterestService {
 		Interest savedInterest = interestRepository.save(interest);
 
 		return interestMapper.toDto(savedInterest, false);
+	}
+
+	/**
+	 * 관심사 물리 삭제
+	 */
+	@Transactional
+	public void deleteInterest(UUID interestId){
+		if (!interestRepository.existsById(interestId)){
+			throw new NoSuchElementException("해당 id의 관심사를 찾을 수 없습니다");
+		}
+		interestRepository.deleteById(interestId);
+
 	}
 
 	/**
