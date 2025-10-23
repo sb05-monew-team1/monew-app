@@ -9,7 +9,7 @@ import javax.inject.Singleton;
 public record UserUpdateRequest(
     //공백이 아닌 문자열 체크
     @NotBlank(message = "닉네임을 입력해주세요.")
-    @Size(min = 2, max = 20, message = "닉네임을 입력해주세요. (최대 10자)")
+    @Size(min = 1, max = 20, message = "닉네임을 입력해주세요. (최대 20자)")
     String nickname
 ) {
 }
