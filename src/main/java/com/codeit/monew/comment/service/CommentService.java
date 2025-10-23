@@ -39,6 +39,7 @@ public class CommentService {
 	 * @param request 댓글 등록 요청
 	 * @return 등록된 댓글 정보
 	 */
+	//jpa 매핑
 	@Transactional
 	public CommentDto registerComment(CommentRegisterRequest request) {
 		log.info("댓글 등록 시작 - articleId: {}, userId: {}", request.articleId(), request.userId());

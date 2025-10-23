@@ -28,6 +28,7 @@ import com.codeit.monew.user.domain.User;
 @AllArgsConstructor
 public class Comment extends BaseUpdatableDomain {
 
+	//jpa 매핑
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "article_id", nullable = false)
 	private Article article;
