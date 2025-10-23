@@ -1,4 +1,19 @@
 package com.codeit.monew.comment.dto;
 
-public record CommentDto() {
+import java.time.Instant;
+import java.util.UUID;
+
+/**
+ * 댓글 응답 DTO
+ */
+public record CommentDto(
+	UUID id,
+	UUID articleId,
+	Long userId,
+	String userNickname,
+	String content,
+	Long likeCount,
+	Boolean likedByMe,
+	Instant createdAt
+) {
 }
