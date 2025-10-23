@@ -1,10 +1,7 @@
 package com.codeit.monew.comment.domain;
 
 import java.time.Instant;
-
-import com.codeit.monew.article.domain.Article;
-import com.codeit.monew.common.base.BaseUpdatableDomain;
-import com.codeit.monew.user.domain.User;
+import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,11 +9,16 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+
+import com.codeit.monew.article.domain.Article;
+import com.codeit.monew.common.base.BaseUpdatableDomain;
+import com.codeit.monew.user.domain.User;
 
 @Entity
 @Table(name = "comments")
@@ -26,12 +28,13 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 public class Comment extends BaseUpdatableDomain {
 
+	//jpa 매핑
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "article_id")
+	@JoinColumn(name = "article_id", nullable = false)
 	private Article article;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "user_id")
+	@JoinColumn(name = "user_id", nullable = false)
 	private User user;
 
 	@Column(nullable = false, length = 500)
