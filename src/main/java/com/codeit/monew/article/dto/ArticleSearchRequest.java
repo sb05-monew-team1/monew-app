@@ -32,11 +32,10 @@ public record ArticleSearchRequest(
 	@NotNull(message = "페이지 크기를 입력 해 주세요.")
 	Integer limit,
 
-	@NotNull(message = "요청 사용자 ID를 입력 해 주세요")
 	UUID monewRequestUserId
 ) {
 
-	public static ArticleSearchRequest filter(ArticleSearchRequest r) {
+	public static ArticleSearchRequest filter(ArticleSearchRequest r, UUID monewRequestUserId) {
 		int limit = clampSize(r.limit, 50, 10, 100);
 		Set<String> allowed = Set.of("publishDate", "commentCount", "viewCount");
 		String orderBy = normalizeOrderBy(r.orderBy, allowed, "publishDate");
@@ -52,7 +51,7 @@ public record ArticleSearchRequest(
 			r.cursor,
 			r.after,
 			limit,
-			r.monewRequestUserId
+			monewRequestUserId
 		);
 	}
 }
