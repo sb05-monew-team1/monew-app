@@ -8,8 +8,10 @@ import org.springframework.stereotype.Service;
 
 import com.codeit.monew.common.dto.CursorPageResponse;
 import com.codeit.monew.notification.domain.Notification;
+import com.codeit.monew.notification.dto.NotificationCreateRequest;
 import com.codeit.monew.notification.dto.NotificationDto;
 import com.codeit.monew.notification.repository.NotificationRepository;
+import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,21 @@ import lombok.RequiredArgsConstructor;
 public class NotificationService {
 	private final NotificationRepository notificationRepository;
 	private final UserRepository userRepository;
+
+	public void Create(NotificationCreateRequest request) {
+		User user = userRepository.findById(request.userId())
+			.orElseThrow(() -> new RuntimeException("User not found"));
+
+		Notification notification = Notification.builder()
+			.user(user)
+			.confirmed(false)
+			.content(request.content())
+			.resourceType(request.resourceType())
+			.resourceId(request.resourceId())
+			.build();
+
+		notificationRepository.save(notification);
+	}
 
 	public CursorPageResponse<NotificationDto> getNotifications(
 		String cursor,
