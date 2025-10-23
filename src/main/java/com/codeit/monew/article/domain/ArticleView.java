@@ -1,5 +1,7 @@
 package com.codeit.monew.article.domain;
 
+import java.time.Instant;
+
 import com.codeit.monew.common.base.BaseUpdatableDomain;
 import com.codeit.monew.user.domain.User;
 
@@ -10,6 +12,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
@@ -17,6 +20,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Getter
 public class ArticleView extends BaseUpdatableDomain {
 
 	@ManyToOne(fetch = FetchType.LAZY)
@@ -26,5 +30,9 @@ public class ArticleView extends BaseUpdatableDomain {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "article_id", nullable = false, updatable = false)
 	private Article article;
+
+	public void update(Instant updatedAt) {
+		super.setUpdatedAt(updatedAt);
+	}
 
 }

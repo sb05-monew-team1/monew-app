@@ -2,6 +2,7 @@ package com.codeit.monew.article.controller;
 
 import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -37,11 +38,12 @@ public class ArticleController {
 	}
 
 	@PostMapping("/{articleId}/article-views")
-	public ResponseEntity<ArticleViewDto> registerArticleView(
+	public ResponseEntity<ArticleViewDto> firstView(
 		@PathVariable UUID articleId,
 		@RequestHeader("Monew-Request-User-ID") UUID userId
 	) {
+		ArticleViewDto dto = articleService.registerArticleView(articleId, userId);
 
-		return null;
+		return ResponseEntity.status(HttpStatus.CREATED).body(dto);
 	}
 }
