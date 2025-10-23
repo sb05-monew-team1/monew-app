@@ -16,7 +16,7 @@ public record UserRegisterRequest(
 
     //닉네임
     @NotBlank(message = "닉네임을 입력해 주세요.")
-    @Size(min = 1, max = 20, message = "닉네임을 입력해 주세요 (최대 10자)")
+    @Size(min = 1, max = 20, message = "닉네임을 입력해 주세요 (최대 20자)")
     String nickname,
 
     //비밀번호
