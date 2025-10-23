@@ -15,7 +15,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
   //회원가입시 이메일 중복 검사
   boolean existsByEmail(String email);
 
-  //닉네임 수정시 중복 검사 (프로토타입엔 없음)
+	boolean existsById(UUID userId);
+
+	//닉네임 수정시 중복 검사 (프로토타입엔 없음)
 
 
 }
