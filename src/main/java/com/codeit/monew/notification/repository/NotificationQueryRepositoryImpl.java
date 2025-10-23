@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import com.codeit.monew.notification.domain.QNotification;
 import com.codeit.monew.notification.dto.NotificationDto;
+import com.codeit.monew.user.domain.QUser;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
