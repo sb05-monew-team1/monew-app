@@ -27,7 +27,7 @@ public class Comment extends BaseUpdatableDomain {
 	private UUID articleId;
 
 	@Column(nullable = false)
-	private Long userId;
+	private UUID userId;
 
 	@Column(nullable = false, length = 500)
 	private String content;
