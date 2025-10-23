@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:monew;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    url: jdbc:h2:mem:monew-test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -16,10 +16,5 @@ spring:
 
 logging:
   level:
-    root: DEBUG
+    root: WARN
     com.codeit.monew: DEBUG
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,loggers  # dev에선 loggers 등 노출 허용
