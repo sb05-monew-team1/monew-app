@@ -15,6 +15,7 @@ public record UserRegisterRequest(
     String email,
 
     //닉네임
+    //프로토타입에는 최대 10자라 나와있지만, 스웨거 명세에는 최대 20자..
     @NotBlank(message = "닉네임을 입력해 주세요.")
     @Size(min = 1, max = 20, message = "닉네임을 입력해 주세요 (최대 20자)")
     String nickname,
