@@ -1,4 +1,4 @@
-package com.codeit.monew.integration;
+package com.codeit.monew.article;
 
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
