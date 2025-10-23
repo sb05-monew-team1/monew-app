@@ -23,7 +23,7 @@ public record ArticleSearchRequest(
 	@NotBlank(message = "정렬 기준을 입력 해 주세요.")
 	String orderBy,
 
-	@NotBlank(message = "정렬 방향을 입력 해 주세요.")
+	@NotNull(message = "정렬 방향을 입력 해 주세요.")
 	Order direction,
 
 	String cursor,
