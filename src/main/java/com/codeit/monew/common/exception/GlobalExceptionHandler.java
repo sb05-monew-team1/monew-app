@@ -5,9 +5,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -44,6 +49,31 @@ public class GlobalExceptionHandler {
 		);
 
 		return ResponseEntity.status(response.status()).body(response);
+	}
+
+	@ExceptionHandler({
+		BindException.class,
+		MethodArgumentTypeMismatchException.class,
+		HttpMessageNotReadableException.class,
+		MissingServletRequestPartException.class,
+		MissingRequestHeaderException.class
+	})
+	public ResponseEntity<ErrorResponse> handleBadRequest(Exception e) {
+		log.warn("요청 파싱/바인딩 실패: {}", e.getMessage());
+		ErrorCode code = ErrorCode.VALIDATION_ERROR;
+
+		return ResponseEntity
+			.status(code.getStatus())
+			.body(
+				new ErrorResponse(
+					Instant.now(),
+					code.name(),
+					code.getMessage(),
+					Map.of(),
+					e.getClass().getSimpleName(),
+					code.getStatus().value()
+				)
+			);
 	}
 
 	@ExceptionHandler(Exception.class)
