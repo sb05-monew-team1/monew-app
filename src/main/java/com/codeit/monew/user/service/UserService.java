@@ -83,6 +83,14 @@ public class UserService {
     user.softDelete();
   }
 
+  //4. 사용자 물리 삭제
+  @Transactional
+  public void hardDeleteUser(UUID userId) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. ID: " + userId));
+    userRepository.deleteById(user.getId());
+  }
+
     /*
   //사용자 정보 조회(필요시 활성화)
   public UserDto getUserInfo(UUID userId){
