@@ -20,19 +20,19 @@ public record ArticleSearchRequest(
 	Instant publishDateFrom,
 	Instant publishDateTo,
 
-	@NotBlank
+	@NotBlank(message = "정렬 기준을 입력 해 주세요.")
 	String orderBy,
 
-	@NotBlank
+	@NotBlank(message = "정렬 방향을 입력 해 주세요.")
 	Order direction,
 
 	String cursor,
 	Instant after,
 
-	@NotNull
+	@NotNull(message = "페이지 크기를 입력 해 주세요.")
 	Integer limit,
 
-	@NotNull
+	@NotNull(message = "요청 사용자 ID를 입력 해 주세요")
 	UUID monewRequestUserId
 ) {
 
