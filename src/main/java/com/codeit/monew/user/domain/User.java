@@ -30,7 +30,7 @@ public class User extends BaseUpdatableDomain {
   private String password; //암호화 되어야 함.
 
   //논리 삭제시간
-  private Instant deleteAt;
+  private Instant deletedAt;
 
   //회원가입을 위한 User 객체 생성
   public static User register(String email, String nickname, String password) {
