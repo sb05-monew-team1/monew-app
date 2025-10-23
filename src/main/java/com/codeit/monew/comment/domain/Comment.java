@@ -3,17 +3,16 @@ package com.codeit.monew.comment.domain;
 import java.time.Instant;
 import java.util.UUID;
 
+import com.codeit.monew.common.base.BaseUpdatableDomain;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
-
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
-
-import com.codeit.monew.common.base.BaseUpdatableDomain;
 
 @Entity
 @Table(name = "comments")

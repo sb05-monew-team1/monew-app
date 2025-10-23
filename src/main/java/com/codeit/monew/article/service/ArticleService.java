@@ -1,6 +1,5 @@
 package com.codeit.monew.article.service;
 
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import org.springframework.data.domain.Slice;
