@@ -87,12 +87,11 @@ CREATE TABLE article_interests
 
 CREATE TABLE article_views
 (
-    id              uuid PRIMARY KEY,
-    article_id      uuid        NOT NULL REFERENCES articles (id) ON DELETE CASCADE,
-    user_id         uuid        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    created_at      timestamptz NOT NULL DEFAULT now(),
-    first_viewed_at timestamptz NOT NULL DEFAULT now(),
-    last_viewed_at  timestamptz NOT NULL DEFAULT now()
+    id         uuid PRIMARY KEY,
+    article_id uuid        NOT NULL REFERENCES articles (id) ON DELETE CASCADE,
+    user_id    uuid        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE UNIQUE INDEX article_views_article_user_unq
