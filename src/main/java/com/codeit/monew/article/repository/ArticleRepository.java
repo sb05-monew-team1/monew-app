@@ -9,5 +9,5 @@ import com.codeit.monew.article.domain.Article;
 /**
  * 기사 Repository
  */
-public interface ArticleRepository extends JpaRepository<Article, UUID> {
+public interface ArticleRepository extends JpaRepository<Article, UUID>, ArticleQueryRepository {
 }
