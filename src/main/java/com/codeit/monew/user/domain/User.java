@@ -52,7 +52,6 @@ public class User extends BaseUpdatableDomain {
   //논리 삭제 처리
   //논리삭제시 1일 뒤 물리 삭제
   public void softDelete() {
-    this.deleteAt = Instant.now();
-
+    this.deletedAt = Instant.now();
   }
 }
