@@ -1,13 +1,13 @@
 package com.codeit.monew.user.dto;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.util.UUID;
 
 //사용자 정보 응답 DTO
 public record UserDto(
-    Long userId,
-    String email,
-    String nickname,
-    LocalDateTime createdAt,
-    LocalDateTime lastModifiedAt
+	UUID id,
+	String email,
+	String nickname,
+	Instant createdAt
 ) {
 }
