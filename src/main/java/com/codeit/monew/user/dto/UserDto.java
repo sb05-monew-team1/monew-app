@@ -5,9 +5,9 @@ import java.util.UUID;
 
 //사용자 정보 응답 DTO
 public record UserDto(
-    UUID id,
-    String email,
-    String nickname,
-    Instant createdAt
+	UUID id,
+	String email,
+	String nickname,
+	Instant createdAt
 ) {
 }

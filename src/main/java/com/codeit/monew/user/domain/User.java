@@ -49,9 +49,9 @@ public class User extends BaseUpdatableDomain {
     this.nickname = nickname;
   }
 
-  //논리 삭제 처리
-  //논리삭제시 1일 뒤 물리 삭제
-  public void softDelete() {
-    this.deletedAt = Instant.now();
-  }
+	//논리 삭제 처리
+	//논리삭제시 1일 뒤 물리 삭제
+	public void softDelete() {
+		this.deletedAt = Instant.now();
+	}
 }
