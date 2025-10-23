@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:monew-test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: none
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema-h2.sql
+      data-locations: classpath:data.sql
+
+logging:
+  level:
+    root: WARN
+    com.codeit.monew: DEBUG
