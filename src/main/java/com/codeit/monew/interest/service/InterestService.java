@@ -1,9 +1,12 @@
 package com.codeit.monew.interest.service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.apache.commons.text.similarity.JaroWinklerSimilarity;
 import org.springframework.stereotype.Service;
@@ -15,6 +18,7 @@ import com.codeit.monew.interest.domain.Interest;
 import com.codeit.monew.interest.domain.InterestKeyword;
 import com.codeit.monew.interest.dto.InterestDto;
 import com.codeit.monew.interest.dto.InterestRegisterRequest;
+import com.codeit.monew.interest.dto.InterestUpdateRequest;
 import com.codeit.monew.interest.mapper.InterestMapper;
 import com.codeit.monew.interest.repository.InterestRepository;
 
@@ -59,12 +63,44 @@ public class InterestService {
 	 * 관심사 물리 삭제
 	 */
 	@Transactional
-	public void deleteInterest(UUID interestId){
-		if (!interestRepository.existsById(interestId)){
+	public void deleteInterest(UUID interestId) {
+		if (!interestRepository.existsById(interestId)) {
 			throw new NoSuchElementException("해당 id의 관심사를 찾을 수 없습니다");
 		}
 		interestRepository.deleteById(interestId);
 
+	}
+
+	/**
+	 * 관심사 정보 수정
+	 */
+	@Transactional
+	public InterestDto updateInterest(UUID interestId, InterestUpdateRequest request) {
+		Interest interest = interestRepository.findById(interestId).orElseThrow(
+			() -> new NoSuchElementException("해당 id의 관심사를 찾을 수 없습니다.")
+		);
+
+		Set<String> existingKeywordString = interest.getKeywords().stream()
+			.map(InterestKeyword::getKeyword)
+			.collect(Collectors.toSet());
+
+		Set<String> requestedKeywordString = new HashSet<>(request.keywords());
+
+		interest.getKeywords().removeIf(
+			keyword -> !requestedKeywordString.contains(keyword.getKeyword()));
+		interestRepository.flush();
+
+		requestedKeywordString.forEach(keywordString -> {
+			if (!existingKeywordString.contains(keywordString)){
+				InterestKeyword newKeyword = InterestKeyword.builder()
+					.keyword(keywordString)
+					.interest(interest)
+					.build();
+				interest.getKeywords().add(newKeyword);
+			}
+		});
+
+		return interestMapper.toDto(interest, false);
 	}
 
 	/**

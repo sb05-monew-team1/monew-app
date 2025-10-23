@@ -1,43 +1,43 @@
 <configuration scan="true">
 
-  <!-- dev: 콘솔 텍스트 -->
-  <springProfile name="dev">
-    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-      <encoder>
-        <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
-      </encoder>
-    </appender>
+    <!-- dev: 콘솔 텍스트 -->
+    <springProfile name="dev">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
+            </encoder>
+        </appender>
 
-    <logger name="org.hibernate.SQL" level="DEBUG"/>
-    <logger name="org.hibernate.type.descriptor.sql" level="WARN"/>
+        <logger name="org.hibernate.SQL" level="DEBUG"/>
+        <logger name="org.hibernate.type.descriptor.sql" level="WARN"/>
 
-    <root level="DEBUG">
-      <appender-ref ref="CONSOLE"/>
-    </root>
-  </springProfile>
+        <root level="DEBUG">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
 
-  <!-- prod: 파일 롤링(텍스트) + INFO -->
-  <springProfile name="prod">
-    <property name="LOG_DIR" value="/var/log/monew"/>
+    <!-- prod: 파일 롤링(텍스트) + INFO -->
+    <springProfile name="prod">
+        <property name="LOG_DIR" value="/var/log/monew"/>
 
-    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-      <file>${LOG_DIR}/app.log</file>
-      <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-        <fileNamePattern>${LOG_DIR}/app.%d{yyyy-MM-dd}.gz</fileNamePattern>
-        <maxHistory>14</maxHistory>
-        <totalSizeCap>5GB</totalSizeCap>
-      </rollingPolicy>
-      <encoder>
-        <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
-      </encoder>
-    </appender>
+        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>${LOG_DIR}/app.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+                <fileNamePattern>${LOG_DIR}/app.%d{yyyy-MM-dd}.gz</fileNamePattern>
+                <maxHistory>14</maxHistory>
+                <totalSizeCap>5GB</totalSizeCap>
+            </rollingPolicy>
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
+            </encoder>
+        </appender>
 
-    <logger name="org.hibernate.SQL" level="WARN"/>
-    <logger name="org.hibernate.type.descriptor.sql" level="WARN"/>
+        <logger name="org.hibernate.SQL" level="WARN"/>
+        <logger name="org.hibernate.type.descriptor.sql" level="WARN"/>
 
-    <root level="INFO">
-      <appender-ref ref="FILE"/>
-    </root>
-  </springProfile>
+        <root level="INFO">
+            <appender-ref ref="FILE"/>
+        </root>
+    </springProfile>
 
 </configuration>
