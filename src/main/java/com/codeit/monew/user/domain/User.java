@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -37,26 +38,26 @@ public class User {
 
   @CreatedDate
   @Column(nullable = false, updatable = false) //생성 이후 수정불가
-  private LocalDateTime createdAt;
+  private Instant createdAt;
 
   @LastModifiedDate //엔티티 수정 시각 자동저장
   @Column(nullable = false)
-  private LocalDateTime lastModifiedAt;
+  private Instant updatedAt;
 
   //논리 삭제
-  private LocalDateTime deleteAt;
+  private Instant deleteAt;
 
   //물리 삭제
-  private LocalDateTime physicalDeleteAt;
+  private Instant physicalDeleteAt;
 
   //회원가입을 위한 User 객체 생성
-  public User user(String email, String nickname, String password, LocalDateTime createdAt, LocalDateTime lastModifiedAt) {
+  public User user(String email, String nickname, String password, Instant createdAt, Instant updatedAt) {
     User user = new User();
     user.email = email;
     user.nickname = nickname;
     user.password = password;
     user.createdAt = createdAt;
-    user.lastModifiedAt = lastModifiedAt;
+    user.updatedAt = updatedAt;
     return user;
   }
 
@@ -68,8 +69,8 @@ public class User {
 
   //논리 삭제 처리
   //논리삭제시 1일 뒤 물리 삭제
-  public void softDelete(LocalDateTime physicalDeleteAt) {
-    this.deleteAt = LocalDateTime.now();
+  public void softDelete(Instant physicalDeleteAt) {
+    this.deleteAt = Instant.now();
     this.physicalDeleteAt = physicalDeleteAt;
 
   }
