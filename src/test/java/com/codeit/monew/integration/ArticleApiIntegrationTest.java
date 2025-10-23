@@ -113,11 +113,11 @@ public class ArticleApiIntegrationTest {
 			UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
 
 			mockMvc.perform(
-				get("/api/articles")
-					.header("Monew-Request-User-ID", userId)
-					.queryParam("orderBy", "publishDate")
-					.queryParam("direction", "DESC")
-					.queryParam("limit", "10"))
+					get("/api/articles")
+						.header("Monew-Request-User-ID", userId)
+						.queryParam("orderBy", "publishDate")
+						.queryParam("direction", "DESC")
+						.queryParam("limit", "10"))
 				.andExpect(status().isOk())
 				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 				.andExpect(jsonPath("$.content").isArray())
@@ -133,10 +133,10 @@ public class ArticleApiIntegrationTest {
 		@DisplayName("요청자 ID 헤더 누락 시 400 반환")
 		void missingHeader() throws Exception {
 			mockMvc.perform(
-				get("/api/articles")
-					.queryParam("orderBy", "publishDate")
-					.queryParam("direction", "DESC")
-					.queryParam("limit", "10"))
+					get("/api/articles")
+						.queryParam("orderBy", "publishDate")
+						.queryParam("direction", "DESC")
+						.queryParam("limit", "10"))
 				.andExpect(status().isBadRequest());
 		}
 
@@ -146,11 +146,11 @@ public class ArticleApiIntegrationTest {
 			UUID unknownUserId = UUID.randomUUID();
 
 			mockMvc.perform(
-				get("/api/articles")
-					.header("Monew-Request-User-ID", unknownUserId)
-					.queryParam("orderBy", "publishDate")
-					.queryParam("direction", "DESC")
-					.queryParam("limit", "10"))
+					get("/api/articles")
+						.header("Monew-Request-User-ID", unknownUserId)
+						.queryParam("orderBy", "publishDate")
+						.queryParam("direction", "DESC")
+						.queryParam("limit", "10"))
 				.andExpect(status().isNotFound());
 		}
 
@@ -160,11 +160,11 @@ public class ArticleApiIntegrationTest {
 			UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
 
 			mockMvc.perform(
-				get("/api/articles")
-					.header("Monew-Request-User-ID", userId)
-					.queryParam("orderBy", "publishDate")
-					.queryParam("direction", "WRONG")
-					.queryParam("limit", "10"))
+					get("/api/articles")
+						.header("Monew-Request-User-ID", userId)
+						.queryParam("orderBy", "publishDate")
+						.queryParam("direction", "WRONG")
+						.queryParam("limit", "10"))
 				.andExpect(status().isBadRequest());
 		}
 	}
