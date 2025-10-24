@@ -94,6 +94,10 @@ public class NotificationService {
 				throw new RuntimeException("User not found");
 			}
 
+			if(!notificationRepository.existsById(notificationId)) {
+				throw new RuntimeException("Notification not found");
+			}
+
 			Notification notification = notificationRepository.findByIdAndUserIdAndConfirmedFalse(notificationId, userId);
 			notification.setConfirmed(true);
 
