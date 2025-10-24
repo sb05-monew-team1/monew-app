@@ -56,7 +56,7 @@ public class InterestController {
 	public ResponseEntity<InterestDto> updateInterest(
 		@PathVariable UUID interestId,
 		@Valid @RequestBody InterestUpdateRequest request
-	){
+	) {
 		InterestDto updateInterest = interestService.updateInterest(interestId, request);
 		return ResponseEntity.ok(updateInterest);
 	}

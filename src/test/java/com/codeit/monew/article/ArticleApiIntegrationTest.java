@@ -1,4 +1,4 @@
-package com.codeit.monew.integration;
+package com.codeit.monew.article;
 
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.codeit.monew.article.exception.ArticleViewAlreadyExistException;
+import com.codeit.monew.article.service.ArticleService;
 import com.codeit.monew.common.exception.ErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -29,6 +30,10 @@ public class ArticleApiIntegrationTest {
 
 	@Autowired
 	private ObjectMapper objectMapper;
+
+	@Autowired
+	private ArticleService articleService;
+
 	@Autowired
 	private MockMvc mockMvc;
 
@@ -166,6 +171,125 @@ public class ArticleApiIntegrationTest {
 						.queryParam("direction", "WRONG")
 						.queryParam("limit", "10"))
 				.andExpect(status().isBadRequest());
+		}
+	}
+
+	@Nested
+	class GetArticle {
+		static UUID articleId = UUID.fromString("10000000-0000-0000-0000-000000000001");
+		static UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+
+		@Test
+		@DisplayName("기사 단건 조회 성공(200)")
+		void success() throws Exception {
+			mockMvc.perform(
+					get("/api/articles/{articleId}", articleId)
+						.header("Monew-Request-User-ID", userId)
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+		}
+
+		@Test
+		@DisplayName("기사 단건 조회 실패 - 존재하지 않는 기사(404)")
+		void article_not_found() throws Exception {
+			mockMvc.perform(
+					get("/api/articles/{articleId}", UUID.randomUUID())
+						.header("Monew-Request-User-ID", userId)
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isNotFound())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+		}
+
+		@Test
+		@DisplayName("기사 단건 조회 실패 - 존재하지 않는 사용자(404)")
+		void user_not_found() throws Exception {
+			mockMvc.perform(
+					get("/api/articles/{articleId}", articleId)
+						.header("Monew-Request-User-ID", UUID.randomUUID())
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isNotFound())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+		}
+	}
+
+	@Nested
+	class DeleteArticleSoft {
+		static UUID articleId = UUID.fromString("10000000-0000-0000-0000-000000000001");
+
+		@Test
+		@DisplayName("기사 논리 삭제 성공(204)")
+		void success() throws Exception {
+			mockMvc.perform(
+					delete("/api/articles/{articleId}", articleId))
+				.andExpect(status().isNoContent());
+		}
+
+		@Test
+		@DisplayName("기사 논리 삭제 실패 - 존재하지 않는 기사(404)")
+		void article_not_found() throws Exception {
+			mockMvc.perform(
+					delete("/api/articles/{articleId}", UUID.randomUUID())
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isNotFound())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+		}
+
+		@Test
+		@DisplayName("기사 논리 삭제 실패 - 논리 삭제된 기사(404)")
+		void article_not_found2() throws Exception {
+			articleService.deleteSoft(articleId);
+
+			mockMvc.perform(
+					delete("/api/articles/{articleId}", articleId)
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isNotFound())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+		}
+	}
+
+	@Nested
+	class DeleteArticleHard {
+		static UUID articleId = UUID.fromString("10000000-0000-0000-0000-000000000001");
+
+		@Test
+		@DisplayName("기사 물리 삭제 성공(204)")
+		void success() throws Exception {
+			mockMvc.perform(
+					delete("/api/articles/{articleId}/hard", articleId))
+				.andExpect(status().isNoContent());
+		}
+
+		@Test
+		@DisplayName("기사 물리 삭제 성공 - 논리 삭제된 기사(204)")
+		void success2() throws Exception {
+			articleService.deleteSoft(articleId);
+			mockMvc.perform(
+					delete("/api/articles/{articleId}/hard", articleId))
+				.andExpect(status().isNoContent());
+		}
+
+		@Test
+		@DisplayName("기사 물리 삭제 실패 - 존재하지 않는 기사(404)")
+		void article_not_found() throws Exception {
+			mockMvc.perform(
+					delete("/api/articles/{articleId}/hard", UUID.randomUUID())
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isNotFound())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+		}
+	}
+
+	@Nested
+	class GetSources {
+		@Test
+		@DisplayName("출처 목록 조회")
+		void success() throws Exception {
+			mockMvc.perform(
+					get("/api/articles/sources")
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
 		}
 	}
 }
