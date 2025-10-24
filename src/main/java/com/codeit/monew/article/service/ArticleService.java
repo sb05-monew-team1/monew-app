@@ -64,6 +64,11 @@ public class ArticleService {
 		return pageResponseMapper.toCursorPageResponse(slice, nextCursor, nextAfter);
 	}
 
+	@Transactional(readOnly = true)
+	public ArticleDto search(UUID articleId, UUID userId) {
+		return null;
+	}
+
 	@Transactional
 	public ArticleViewDto registerArticleView(UUID articleId, UUID userId) {
 		Article article = articleRepository.findById(articleId)
