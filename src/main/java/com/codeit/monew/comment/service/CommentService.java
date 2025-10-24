@@ -1,12 +1,7 @@
 package com.codeit.monew.comment.service;
 
-import java.util.UUID;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 import com.codeit.monew.article.domain.Article;
 import com.codeit.monew.article.repository.ArticleRepository;
@@ -20,6 +15,9 @@ import com.codeit.monew.common.exception.BusinessException;
 import com.codeit.monew.common.exception.ErrorCode;
 import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.repository.UserRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 댓글 Service
