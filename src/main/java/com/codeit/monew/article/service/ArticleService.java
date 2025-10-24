@@ -1,5 +1,6 @@
 package com.codeit.monew.article.service;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import org.springframework.data.domain.Slice;
@@ -90,9 +91,20 @@ public class ArticleService {
 		return dto;
 	}
 
+	@Transactional
+	public void deleteSoft(UUID articleId) {
+		Article article = validateArticle(articleId);
+		article.deleteSoft(Instant.now());
+	}
+
 	private Article validateArticle(UUID articleId) {
-		return articleRepository.findById(articleId)
+		Article article = articleRepository.findById(articleId)
 			.orElseThrow(() -> new ArticleNotFoundException().addDetail("articleId", articleId));
+		if (article.getDeleted_at() != null) {
+			throw new ArticleNotFoundException().addDetail("articleId", articleId);
+		}
+
+		return article;
 	}
 
 	private User validateUser(UUID userId) {
