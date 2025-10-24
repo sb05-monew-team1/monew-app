@@ -247,4 +247,36 @@ public class ArticleApiIntegrationTest {
 				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
 		}
 	}
+
+	@Nested
+	class DeleteArticleHard {
+		static UUID articleId = UUID.fromString("10000000-0000-0000-0000-000000000001");
+
+		@Test
+		@DisplayName("기사 물리 삭제 성공(204)")
+		void success() throws Exception {
+			mockMvc.perform(
+					delete("/api/articles/{articleId}/hard", articleId))
+				.andExpect(status().isNoContent());
+		}
+
+		@Test
+		@DisplayName("기사 물리 삭제 성공 - 논리 삭제된 기사(204)")
+		void success2() throws Exception {
+			articleService.deleteSoft(articleId);
+			mockMvc.perform(
+					delete("/api/articles/{articleId}/hard", articleId))
+				.andExpect(status().isNoContent());
+		}
+
+		@Test
+		@DisplayName("기사 물리 삭제 실패 - 존재하지 않는 기사(404)")
+		void article_not_found() throws Exception {
+			mockMvc.perform(
+					delete("/api/articles/{articleId}/hard", UUID.randomUUID())
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isNotFound())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+		}
+	}
 }
