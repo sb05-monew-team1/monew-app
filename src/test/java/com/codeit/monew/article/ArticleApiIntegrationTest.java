@@ -168,4 +168,43 @@ public class ArticleApiIntegrationTest {
 				.andExpect(status().isBadRequest());
 		}
 	}
+
+	@Nested
+	class GetArticle {
+		static UUID articleId = UUID.fromString("10000000-0000-0000-0000-000000000001");
+		static UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+
+		@Test
+		@DisplayName("기사 단건 조회 성공(200)")
+		void success() throws Exception {
+			mockMvc.perform(
+					get("/api/articles/{articleId}", articleId)
+						.header("Monew-Request-User-ID", userId)
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+		}
+
+		@Test
+		@DisplayName("기사 단건 조회 실패 - 존재하지 않는 기사(404)")
+		void article_not_found() throws Exception {
+			mockMvc.perform(
+				get("/api/articles/{articleId}", UUID.randomUUID())
+					.header("Monew-Request-User-ID", userId)
+					.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isNotFound())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+		}
+
+		@Test
+		@DisplayName("기사 단건 조회 실패 - 존재하지 않는 사용자(404)")
+		void user_not_found() throws Exception {
+			mockMvc.perform(
+				get("/api/articles/{articleId}", articleId)
+					.header("Monew-Request-User-ID", UUID.randomUUID())
+					.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isNotFound())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+		}
+	}
 }
