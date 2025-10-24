@@ -3,7 +3,6 @@ package com.codeit.monew.article;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
-import static org.mockito.Mockito.*;
 
 import java.time.Instant;
 import java.util.List;
@@ -46,7 +45,6 @@ public class ArticleServiceTest {
 	@InjectMocks
 	private ArticleService articleService;
 
-
 	@Nested
 	class GetArticle {
 		@Test
@@ -87,11 +85,7 @@ public class ArticleServiceTest {
 
 			assertThat(result).isEqualTo(articleDto);
 
-
 		}
 	}
-
-
-
 
 }

@@ -91,7 +91,7 @@ public class InterestService {
 		interestRepository.flush();
 
 		requestedKeywordString.forEach(keywordString -> {
-			if (!existingKeywordString.contains(keywordString)){
+			if (!existingKeywordString.contains(keywordString)) {
 				InterestKeyword newKeyword = InterestKeyword.builder()
 					.keyword(keywordString)
 					.interest(interest)

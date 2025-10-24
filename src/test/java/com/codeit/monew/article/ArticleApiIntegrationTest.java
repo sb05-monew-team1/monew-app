@@ -189,9 +189,9 @@ public class ArticleApiIntegrationTest {
 		@DisplayName("기사 단건 조회 실패 - 존재하지 않는 기사(404)")
 		void article_not_found() throws Exception {
 			mockMvc.perform(
-				get("/api/articles/{articleId}", UUID.randomUUID())
-					.header("Monew-Request-User-ID", userId)
-					.accept(MediaType.APPLICATION_JSON))
+					get("/api/articles/{articleId}", UUID.randomUUID())
+						.header("Monew-Request-User-ID", userId)
+						.accept(MediaType.APPLICATION_JSON))
 				.andExpect(status().isNotFound())
 				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
 		}
@@ -200,9 +200,9 @@ public class ArticleApiIntegrationTest {
 		@DisplayName("기사 단건 조회 실패 - 존재하지 않는 사용자(404)")
 		void user_not_found() throws Exception {
 			mockMvc.perform(
-				get("/api/articles/{articleId}", articleId)
-					.header("Monew-Request-User-ID", UUID.randomUUID())
-					.accept(MediaType.APPLICATION_JSON))
+					get("/api/articles/{articleId}", articleId)
+						.header("Monew-Request-User-ID", UUID.randomUUID())
+						.accept(MediaType.APPLICATION_JSON))
 				.andExpect(status().isNotFound())
 				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
 		}

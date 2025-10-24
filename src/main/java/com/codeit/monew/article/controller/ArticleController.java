@@ -41,7 +41,7 @@ public class ArticleController {
 	public ResponseEntity<ArticleDto> getArticle(
 		@PathVariable("articleId") UUID articleId,
 		@RequestHeader("Monew-Request-User-ID") UUID userId
-		) {
+	) {
 		return ResponseEntity.ok(articleService.search(articleId, userId));
 	}
 
