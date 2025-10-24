@@ -97,6 +97,16 @@ public class ArticleService {
 		article.deleteSoft(Instant.now());
 	}
 
+	@Transactional
+	public void deleteHard(UUID articleId) {
+		// validateArticle 메소드의 경우 논리 삭제된 기사까지 검증하기 때문에 물리 삭제에선 검증 로직 따로 작성
+		if(!articleRepository.existsById(articleId)) {
+			throw new ArticleNotFoundException().addDetail("articleId", articleId);
+		}
+
+		articleRepository.deleteById(articleId);
+	}
+
 	private Article validateArticle(UUID articleId) {
 		Article article = articleRepository.findById(articleId)
 			.orElseThrow(() -> new ArticleNotFoundException().addDetail("articleId", articleId));
