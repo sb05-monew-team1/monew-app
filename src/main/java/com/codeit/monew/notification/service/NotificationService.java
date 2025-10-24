@@ -22,7 +22,7 @@ public class NotificationService {
 	private final NotificationRepository notificationRepository;
 	private final UserRepository userRepository;
 
-	public void Create(NotificationCreateRequest request) {
+	public Notification create(NotificationCreateRequest request) {
 		User user = userRepository.findById(request.userId())
 			.orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -35,6 +35,7 @@ public class NotificationService {
 			.build();
 
 		notificationRepository.save(notification);
+		return notification;
 	}
 
 	public CursorPageResponse<NotificationDto> getNotifications(
