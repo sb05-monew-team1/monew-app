@@ -1,6 +1,8 @@
 package com.codeit.monew.article.service;
 
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.Slice;
@@ -8,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.codeit.monew.article.domain.Article;
+import com.codeit.monew.article.domain.ArticleSource;
 import com.codeit.monew.article.domain.ArticleView;
 import com.codeit.monew.article.dto.ArticleDto;
 import com.codeit.monew.article.dto.ArticleSearchRequest;
@@ -89,6 +92,11 @@ public class ArticleService {
 		ArticleViewDto dto = articleViewMapper.toDto(articleView);
 
 		return dto;
+	}
+
+	@Transactional(readOnly = true)
+	public List<String> getSources() {
+		return List.of(Arrays.stream(ArticleSource.values()).map(Enum::name).toArray(String[]::new));
 	}
 
 	@Transactional
