@@ -1,4 +1,4 @@
-package com.codeit.monew.repository;
+package com.codeit.monew.article;
 
 import static org.assertj.core.api.Assertions.*;
 

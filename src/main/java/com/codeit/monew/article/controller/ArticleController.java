@@ -37,6 +37,14 @@ public class ArticleController {
 		return articleService.search(filtered);
 	}
 
+	@GetMapping("/{articleId}")
+	public ResponseEntity<ArticleDto> getArticle(
+		@PathVariable("articleId") UUID articleId,
+		@RequestHeader("Monew-Request-User-ID") UUID userId
+	) {
+		return ResponseEntity.ok(articleService.search(articleId, userId));
+	}
+
 	@PostMapping("/{articleId}/article-views")
 	public ResponseEntity<ArticleViewDto> firstView(
 		@PathVariable UUID articleId,
