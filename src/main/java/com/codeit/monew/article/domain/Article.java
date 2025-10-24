@@ -66,4 +66,10 @@ public class Article extends BaseDomain {
 	private List<Interest> interests = new ArrayList<>();
 
 	private Instant deleted_at;
+
+	public void deleteSoft(Instant deletedAt) {
+		if (deletedAt != null) {
+			this.deleted_at = deletedAt;
+		}
+	}
 }

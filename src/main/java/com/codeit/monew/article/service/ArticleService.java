@@ -1,5 +1,6 @@
 package com.codeit.monew.article.service;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import org.springframework.data.domain.Slice;
@@ -90,9 +91,30 @@ public class ArticleService {
 		return dto;
 	}
 
+	@Transactional
+	public void deleteSoft(UUID articleId) {
+		Article article = validateArticle(articleId);
+		article.deleteSoft(Instant.now());
+	}
+
+	@Transactional
+	public void deleteHard(UUID articleId) {
+		// validateArticle 메소드의 경우 논리 삭제된 기사까지 검증하기 때문에 물리 삭제에선 검증 로직 따로 작성
+		if(!articleRepository.existsById(articleId)) {
+			throw new ArticleNotFoundException().addDetail("articleId", articleId);
+		}
+
+		articleRepository.deleteById(articleId);
+	}
+
 	private Article validateArticle(UUID articleId) {
-		return articleRepository.findById(articleId)
+		Article article = articleRepository.findById(articleId)
 			.orElseThrow(() -> new ArticleNotFoundException().addDetail("articleId", articleId));
+		if (article.getDeleted_at() != null) {
+			throw new ArticleNotFoundException().addDetail("articleId", articleId);
+		}
+
+		return article;
 	}
 
 	private User validateUser(UUID userId) {
