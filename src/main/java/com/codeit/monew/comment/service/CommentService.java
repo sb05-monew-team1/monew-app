@@ -8,6 +8,7 @@ import com.codeit.monew.article.repository.ArticleRepository;
 import com.codeit.monew.comment.domain.Comment;
 import com.codeit.monew.comment.dto.CommentDto;
 import com.codeit.monew.comment.dto.CommentRegisterRequest;
+import com.codeit.monew.comment.dto.CommentUpdateRequest;
 import com.codeit.monew.comment.mapper.CommentMapper;
 import com.codeit.monew.comment.repository.CommentRepository;
 import com.codeit.monew.common.exception.BusinessException;
@@ -65,5 +66,36 @@ public class CommentService {
 
 		// DTO 변환 후 반환 (JPA 매핑으로 user.getNickname() 바로 접근 가능)
 		return commentMapper.toDto(savedComment, savedComment.getUser().getNickname(), false);
+	}
+
+	/**
+	 * 댓글 수정
+	 * @param commentId 댓글 ID
+	 * @param requestUserId 요청자 ID
+	 * @param request 댓글 수정 요청
+	 * @return 수정된 댓글 정보
+	 */
+	@Transactional
+	public CommentDto updateComment(UUID commentId, UUID requestUserId, CommentUpdateRequest request) {
+		log.info("댓글 수정 시작 - commentId: {}, requestUserId: {}", commentId, requestUserId);
+
+		// 댓글 조회
+		Comment comment = commentRepository.findById(commentId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+
+		// 권한 확인 (본인이 작성한 댓글인지)
+		if (!comment.getUser().getId().equals(requestUserId)) {
+			log.warn("댓글 수정 권한 없음 - commentId: {}, commentUserId: {}, requestUserId: {}",
+				commentId, comment.getUser().getId(), requestUserId);
+			throw new BusinessException(ErrorCode.FORBIDDEN);
+		}
+
+		// 내용 수정
+		comment.updateContent(request.content());
+
+		log.info("댓글 수정 완료 - commentId: {}", commentId);
+
+		// DTO 변환 후 반환
+		return commentMapper.toDto(comment, comment.getUser().getNickname(), false);
 	}
 }
