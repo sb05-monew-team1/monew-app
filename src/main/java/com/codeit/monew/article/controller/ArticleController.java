@@ -1,5 +1,6 @@
 package com.codeit.monew.article.controller;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -44,6 +45,11 @@ public class ArticleController {
 		@RequestHeader("Monew-Request-User-ID") UUID userId
 	) {
 		return ResponseEntity.ok(articleService.search(articleId, userId));
+	}
+
+	@GetMapping("/sources")
+	public ResponseEntity<List<String>> getSources() {
+		return ResponseEntity.ok(articleService.getSources());
 	}
 
 	@PostMapping("/{articleId}/article-views")

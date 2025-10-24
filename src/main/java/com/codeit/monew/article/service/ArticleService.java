@@ -1,6 +1,8 @@
 package com.codeit.monew.article.service;
 
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.Slice;
@@ -8,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.codeit.monew.article.domain.Article;
+import com.codeit.monew.article.domain.ArticleSource;
 import com.codeit.monew.article.domain.ArticleView;
 import com.codeit.monew.article.dto.ArticleDto;
 import com.codeit.monew.article.dto.ArticleSearchRequest;
@@ -91,6 +94,11 @@ public class ArticleService {
 		return dto;
 	}
 
+	@Transactional(readOnly = true)
+	public List<String> getSources() {
+		return List.of(Arrays.stream(ArticleSource.values()).map(Enum::name).toArray(String[]::new));
+	}
+
 	@Transactional
 	public void deleteSoft(UUID articleId) {
 		Article article = validateArticle(articleId);
@@ -100,7 +108,7 @@ public class ArticleService {
 	@Transactional
 	public void deleteHard(UUID articleId) {
 		// validateArticle 메소드의 경우 논리 삭제된 기사까지 검증하기 때문에 물리 삭제에선 검증 로직 따로 작성
-		if(!articleRepository.existsById(articleId)) {
+		if (!articleRepository.existsById(articleId)) {
 			throw new ArticleNotFoundException().addDetail("articleId", articleId);
 		}
 
