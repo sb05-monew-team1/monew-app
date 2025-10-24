@@ -41,10 +41,7 @@ public class ArticleService {
 
 	@Transactional(readOnly = true)
 	public CursorPageResponse<ArticleDto> search(ArticleSearchRequest request) {
-		// User 도메인과 관련 커스텀 예외가 작성되면 마무리
-		if (!userRepository.existsById(request.monewRequestUserId())) {
-			throw new UserNotFoundException().addDetail("userId", request.monewRequestUserId());
-		}
+		validateUser(request.monewRequestUserId());
 
 		Slice<ArticleDto> slice = articleRepository.search(request);
 		String nextCursor = null;
@@ -66,16 +63,18 @@ public class ArticleService {
 
 	@Transactional(readOnly = true)
 	public ArticleDto search(UUID articleId, UUID userId) {
-		return null;
+		Article article = validateArticle(articleId);
+		validateUser(userId);
+
+		boolean viewedByMe = articleViewRepository.existsByUserIdAndArticleId(userId, articleId);
+
+		return articleMapper.toArticleDto(article, viewedByMe);
 	}
 
 	@Transactional
 	public ArticleViewDto registerArticleView(UUID articleId, UUID userId) {
-		Article article = articleRepository.findById(articleId)
-			.orElseThrow(() -> new ArticleNotFoundException().addDetail("articleId", articleId));
-
-		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new UserNotFoundException().addDetail("userId", userId));
+		Article article = validateArticle(articleId);
+		User user = validateUser(userId);
 
 		if (articleViewRepository.existsByUserIdAndArticleId(userId, articleId)) {
 			throw new ArticleViewAlreadyExistException().addDetail("articleId", articleId).addDetail("userId", userId);
@@ -89,5 +88,15 @@ public class ArticleService {
 		ArticleViewDto dto = articleViewMapper.toDto(articleView);
 
 		return dto;
+	}
+
+	private Article validateArticle(UUID articleId) {
+		return articleRepository.findById(articleId)
+			.orElseThrow(() -> new ArticleNotFoundException().addDetail("articleId", articleId));
+	}
+
+	private User validateUser(UUID userId) {
+		return userRepository.findById(userId)
+			.orElseThrow(() -> new UserNotFoundException().addDetail("userId", userId));
 	}
 }
