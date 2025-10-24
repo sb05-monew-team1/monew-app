@@ -23,6 +23,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
@@ -31,6 +32,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
 @Builder
+@Getter
 public class Article extends BaseDomain {
 
 	@Column(nullable = false, updatable = false, length = 20)
@@ -64,4 +66,10 @@ public class Article extends BaseDomain {
 	private List<Interest> interests = new ArrayList<>();
 
 	private Instant deleted_at;
+
+	public void deleteSoft(Instant deletedAt) {
+		if (deletedAt != null) {
+			this.deleted_at = deletedAt;
+		}
+	}
 }

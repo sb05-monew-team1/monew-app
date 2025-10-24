@@ -1,6 +1,6 @@
-package com.codeit.monew.repository;
+package com.codeit.monew.article;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.*;
 
 import java.time.Instant;
 import java.util.UUID;
