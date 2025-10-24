@@ -279,4 +279,17 @@ public class ArticleApiIntegrationTest {
 				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
 		}
 	}
+
+	@Nested
+	class GetSources {
+		@Test
+		@DisplayName("출처 목록 조회")
+		void success() throws Exception {
+			mockMvc.perform(
+				get("/api/articles/sources")
+					.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+		}
+	}
 }
