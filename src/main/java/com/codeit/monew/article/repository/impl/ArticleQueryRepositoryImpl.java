@@ -105,16 +105,6 @@ public class ArticleQueryRepositoryImpl implements ArticleQueryRepository {
 			}
 		}
 
-		// UUID id,
-		// String source,
-		// String sourceUrl,
-		// String title,
-		// Instant publishDate,
-		// String summary,
-		// long commentCount,
-		// long viewCount,
-		// boolean viewedByMe
-
 		QArticleView viewedArticleView = new QArticleView("viewedArticle");
 		BooleanExpression viewedByMeExpr = JPAExpressions
 			.selectOne()
