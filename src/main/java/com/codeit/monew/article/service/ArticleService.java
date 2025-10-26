@@ -62,7 +62,9 @@ public class ArticleService {
 			};
 		}
 
-		return pageResponseMapper.toCursorPageResponse(slice, nextCursor, nextAfter);
+		long totalElements = articleRepository.count();
+
+		return pageResponseMapper.toCursorPageResponse(slice, nextCursor, nextAfter, totalElements);
 	}
 
 	@Transactional(readOnly = true)
