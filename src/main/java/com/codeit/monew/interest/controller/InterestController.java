@@ -20,6 +20,7 @@ import com.codeit.monew.interest.dto.InterestDto;
 import com.codeit.monew.interest.dto.InterestRegisterRequest;
 import com.codeit.monew.interest.dto.InterestSearchRequest;
 import com.codeit.monew.interest.dto.InterestUpdateRequest;
+import com.codeit.monew.interest.dto.SubscriptionDto;
 import com.codeit.monew.interest.service.InterestService;
 
 import jakarta.validation.Valid;
@@ -75,6 +76,18 @@ public class InterestController {
 		@RequestHeader("Monew-Request-User-ID") UUID userId
 	) {
 		CursorPageResponse<InterestDto> response = interestService.getInterests(request, userId);
+		return ResponseEntity.ok(response);
+	}
+
+	/**
+	 * 관심사 구독
+	 */
+	@PostMapping("{interestId}/subscriptions")
+	public ResponseEntity<SubscriptionDto> createSubscription(
+		@PathVariable UUID interestId,
+		@RequestHeader("Monew-Request-User-ID") UUID userId
+	) {
+		SubscriptionDto response = interestService.createSubscription(interestId, userId);
 		return ResponseEntity.ok(response);
 	}
 
