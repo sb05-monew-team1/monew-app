@@ -66,6 +66,7 @@ public class CommentController {
 	 * 댓글 논리 삭제
 	 * @param commentId 댓글 ID
 	 */
+	//수정완
 	@DeleteMapping("/{commentId}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void softDeleteComment(@PathVariable UUID commentId) {

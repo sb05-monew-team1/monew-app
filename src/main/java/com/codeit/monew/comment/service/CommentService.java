@@ -45,7 +45,7 @@ public class CommentService {
 	public CommentDto registerComment(CommentRegisterRequest request) {
 		log.info("댓글 등록 시작 - articleId: {}, userId: {}", request.articleId(), request.userId());
 
-		// 기사 존재 확인
+		// 기사 존재 확인 (수정완)
 		Article article = articleRepository.findById(request.articleId())
 			.orElseThrow(() -> new BusinessException(ErrorCode.ARTICLE_NOT_FOUND)
 				.addDetail("articleId", request.articleId()));
