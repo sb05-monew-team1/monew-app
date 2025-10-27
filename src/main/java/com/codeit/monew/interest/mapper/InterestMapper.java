@@ -1,6 +1,8 @@
 package com.codeit.monew.interest.mapper;
 
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.mapstruct.Mapper;
@@ -23,6 +25,12 @@ public interface InterestMapper {
 		}
 		return keywords.stream()
 			.map(InterestKeyword::getKeyword)
+			.collect(Collectors.toList());
+	}
+
+	default List<InterestDto> toDtoList(List<Interest> interests, Set<UUID> subscribedInterestIds) {
+		return interests.stream()
+			.map(interest -> toDto(interest, subscribedInterestIds.contains(interest.getId())))
 			.collect(Collectors.toList());
 	}
 }
