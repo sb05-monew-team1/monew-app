@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -59,5 +60,31 @@ public class CommentController {
 	) {
 		log.info("댓글 수정 API 호출 - commentId: {}, requestUserId: {}", commentId, requestUserId);
 		return commentService.updateComment(commentId, requestUserId, request);
+	}
+
+	/**
+	 * 댓글 논리 삭제
+	 * @param commentId 댓글 ID
+	 * @param requestUserId 요청자 ID (헤더)
+	 */
+	@DeleteMapping("/{commentId}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void softDeleteComment(
+		@PathVariable UUID commentId,
+		@RequestHeader("Monew-Request-User-ID") UUID requestUserId
+	) {
+		log.info("댓글 논리 삭제 API 호출 - commentId: {}, requestUserId: {}", commentId, requestUserId);
+		commentService.softDeleteComment(commentId, requestUserId);
+	}
+
+	/**
+	 * 댓글 물리 삭제 (테스트용)
+	 * @param commentId 댓글 ID
+	 */
+	@DeleteMapping("/{commentId}/hard")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void hardDeleteComment(@PathVariable UUID commentId) {
+		log.info("댓글 물리 삭제 API 호출 - commentId: {}", commentId);
+		commentService.hardDeleteComment(commentId);
 	}
 }
