@@ -100,4 +100,48 @@ public class CommentService {
 		// DTO 변환 후 반환
 		return commentMapper.toDto(comment, comment.getUser().getNickname(), false);
 	}
+
+	/**
+	 * 댓글 논리 삭제
+	 * @param commentId 댓글 ID
+	 * @param requestUserId 요청자 ID
+	 */
+	@Transactional
+	public void softDeleteComment(UUID commentId, UUID requestUserId) {
+		log.info("댓글 논리 삭제 시작 - commentId: {}, requestUserId: {}", commentId, requestUserId);
+
+		// 댓글 조회
+		Comment comment = commentRepository.findById(commentId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+
+		// 권한 확인 (본인이 작성한 댓글인지)
+		if (!comment.getUser().getId().equals(requestUserId)) {
+			log.warn("댓글 삭제 권한 없음 - commentId: {}, commentUserId: {}, requestUserId: {}",
+				commentId, comment.getUser().getId(), requestUserId);
+			throw new BusinessException(ErrorCode.FORBIDDEN);
+		}
+
+		// 논리 삭제 (deletedAt 필드에 현재 시간 저장)
+		comment.softDelete();
+
+		log.info("댓글 논리 삭제 완료 - commentId: {}", commentId);
+	}
+
+	/**
+	 * 댓글 물리 삭제 (테스트용)
+	 * @param commentId 댓글 ID
+	 */
+	@Transactional
+	public void hardDeleteComment(UUID commentId) {
+		log.info("댓글 물리 삭제 시작 - commentId: {}", commentId);
+
+		// 댓글 조회
+		Comment comment = commentRepository.findById(commentId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+
+		// DB에서 완전 삭제
+		commentRepository.delete(comment);
+
+		log.info("댓글 물리 삭제 완료 - commentId: {}", commentId);
+	}
 }

@@ -24,9 +24,10 @@ public enum ErrorCode {
 	COMMENT_NOT_FOUND("댓글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
 
 	// Common
+	FORBIDDEN("권한이 없습니다.", HttpStatus.FORBIDDEN),
 	INTERNAL_SERVER_ERROR("서버 내부 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
 	VALIDATION_ERROR("요청 데이터 유효성 검사에 실패했습니다."),
-	FORBIDDEN;
+	;
 
 	private final String message;
 	private final HttpStatus status;
