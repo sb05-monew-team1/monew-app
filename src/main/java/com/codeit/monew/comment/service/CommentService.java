@@ -47,11 +47,13 @@ public class CommentService {
 
 		// 기사 존재 확인
 		Article article = articleRepository.findById(request.articleId())
-			.orElseThrow(() -> new BusinessException(ErrorCode.ARTICLE_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(ErrorCode.ARTICLE_NOT_FOUND)
+				.addDetail("articleId", request.articleId()));
 
 		// 사용자 존재 확인
 		User user = userRepository.findById(request.userId())
-			.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND)
+				.addDetail("userId", request.userId()));
 
 		// Comment 엔티티 생성 (JPA 매핑)
 		Comment comment = Comment.builder()
@@ -83,13 +85,16 @@ public class CommentService {
 
 		// 댓글 조회
 		Comment comment = commentRepository.findById(commentId)
-			.orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND)
+				.addDetail("commentId", commentId));
 
 		// 권한 확인 (본인이 작성한 댓글인지)
 		if (!comment.getUser().getId().equals(requestUserId)) {
 			log.warn("댓글 수정 권한 없음 - commentId: {}, commentUserId: {}, requestUserId: {}",
 				commentId, comment.getUser().getId(), requestUserId);
-			throw new BusinessException(ErrorCode.FORBIDDEN);
+			throw new BusinessException(ErrorCode.FORBIDDEN)
+				.addDetail("commentId", commentId)
+				.addDetail("requestUserId", requestUserId);
 		}
 
 		// 내용 수정
@@ -104,22 +109,15 @@ public class CommentService {
 	/**
 	 * 댓글 논리 삭제
 	 * @param commentId 댓글 ID
-	 * @param requestUserId 요청자 ID
 	 */
 	@Transactional
-	public void softDeleteComment(UUID commentId, UUID requestUserId) {
-		log.info("댓글 논리 삭제 시작 - commentId: {}, requestUserId: {}", commentId, requestUserId);
+	public void softDeleteComment(UUID commentId) {
+		log.info("댓글 논리 삭제 시작 - commentId: {}", commentId);
 
 		// 댓글 조회
 		Comment comment = commentRepository.findById(commentId)
-			.orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
-
-		// 권한 확인 (본인이 작성한 댓글인지)
-		if (!comment.getUser().getId().equals(requestUserId)) {
-			log.warn("댓글 삭제 권한 없음 - commentId: {}, commentUserId: {}, requestUserId: {}",
-				commentId, comment.getUser().getId(), requestUserId);
-			throw new BusinessException(ErrorCode.FORBIDDEN);
-		}
+			.orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND)
+				.addDetail("commentId", commentId));
 
 		// 논리 삭제 (deletedAt 필드에 현재 시간 저장)
 		comment.softDelete();
@@ -137,7 +135,8 @@ public class CommentService {
 
 		// 댓글 조회
 		Comment comment = commentRepository.findById(commentId)
-			.orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND)
+				.addDetail("commentId", commentId));
 
 		// DB에서 완전 삭제
 		commentRepository.delete(comment);

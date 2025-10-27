@@ -65,16 +65,12 @@ public class CommentController {
 	/**
 	 * 댓글 논리 삭제
 	 * @param commentId 댓글 ID
-	 * @param requestUserId 요청자 ID (헤더)
 	 */
 	@DeleteMapping("/{commentId}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public void softDeleteComment(
-		@PathVariable UUID commentId,
-		@RequestHeader("Monew-Request-User-ID") UUID requestUserId
-	) {
-		log.info("댓글 논리 삭제 API 호출 - commentId: {}, requestUserId: {}", commentId, requestUserId);
-		commentService.softDeleteComment(commentId, requestUserId);
+	public void softDeleteComment(@PathVariable UUID commentId) {
+		log.info("댓글 논리 삭제 API 호출 - commentId: {}", commentId);
+		commentService.softDeleteComment(commentId);
 	}
 
 	/**
