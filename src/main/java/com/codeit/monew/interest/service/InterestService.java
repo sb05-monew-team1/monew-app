@@ -79,7 +79,7 @@ public class InterestService {
 
 		Interest savedInterest = interestRepository.save(interest);
 
-		return interestMapper.toDto(savedInterest, false);
+		return interestMapper.toDto(savedInterest, null);
 	}
 
 	/**
@@ -123,7 +123,7 @@ public class InterestService {
 			}
 		});
 
-		return interestMapper.toDto(interest, false);
+		return interestMapper.toDto(interest, null);
 	}
 
 	/**
