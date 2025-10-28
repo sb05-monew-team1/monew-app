@@ -12,6 +12,8 @@ public enum ErrorCode {
 	// User
 	USER_ALREADY_EXIST("이미 존재하는 사용자입니다.", HttpStatus.CONFLICT),
 	USER_NOT_FOUND("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+	USER_ALREADY_DELETED("이미 삭제된 사용자입니다.", HttpStatus.CONFLICT),
+	USER_NOT_SOFT_DELETED("논리 삭제되지 않은 사용자입니다.", HttpStatus.BAD_REQUEST),
 
 	// Article
 	ARTICLE_NOT_FOUND("기사를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),

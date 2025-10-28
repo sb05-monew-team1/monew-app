@@ -5,8 +5,10 @@ import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.dto.UserDto;
 import com.codeit.monew.user.dto.UserRegisterRequest;
 import com.codeit.monew.user.dto.UserUpdateRequest;
+import com.codeit.monew.user.exception.UserAlreadyDeletedException;
 import com.codeit.monew.user.exception.UserAlreadyExistsException;
 import com.codeit.monew.user.exception.UserException;
+import com.codeit.monew.user.exception.UserNotSoftDeletedException;
 import com.codeit.monew.user.mapper.UserMapper;
 import com.codeit.monew.user.repository.UserRepository;
 import java.util.UUID;
@@ -75,6 +77,10 @@ public class UserService {
   public void deleteUser(UUID userId) {
     User user = userRepository.findById(userId)
         .orElseThrow(UserNotFoundException::new);
+    if (user.getDeletedAt() != null) {
+      // 이미 삭제된 사용자에 대해 삭제를 요청하면 "상태 충돌" 예외 발생
+      throw new UserAlreadyDeletedException(userId);
+    }
 
     //논리삭제 메서드 호출
     user.softDelete();
@@ -85,6 +91,11 @@ public class UserService {
   public void hardDeleteUser(UUID userId) {
     User user = userRepository.findById(userId)
         .orElseThrow(UserNotFoundException::new);
+    if (user.getDeletedAt() == null) {
+      // 활성화된 사용자를 물리 삭제하려 하면 예외 발생
+      throw new UserNotSoftDeletedException(userId);
+    }
+
     userRepository.deleteById(user.getId());
   }
 
