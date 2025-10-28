@@ -91,4 +91,15 @@ public class InterestController {
 		return ResponseEntity.ok(response);
 	}
 
+	/**
+	 * 관심사 구독 취소
+	 */
+	@DeleteMapping("{interestId}/subscriptions")
+	public ResponseEntity<Void> deleteSubscription(
+		@PathVariable UUID interestId,
+		@RequestHeader("Monew-Request-User-ID") UUID userId
+	) {
+		interestService.deleteSubscription(interestId, userId);
+		return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+	}
 }
