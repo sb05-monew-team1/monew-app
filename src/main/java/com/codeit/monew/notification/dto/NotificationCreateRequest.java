@@ -1,12 +1,8 @@
 package com.codeit.monew.notification.dto;
 
-import java.time.Instant;
 import java.util.UUID;
 
-public record NotificationDto(
-	UUID id,
-	Instant createdAt,
-	Instant updatedAt,
+public record NotificationCreateRequest(
 	UUID userId,
 	String content,
 	String resourceType,

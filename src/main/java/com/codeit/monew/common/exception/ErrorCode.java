@@ -19,11 +19,14 @@ public enum ErrorCode {
 
 	// Interest
 	SIMILAR_INTEREST_EXISTS("이미 유사한 이름의 관심사가 존재합니다.", HttpStatus.CONFLICT),
+	ALREADY_SUBSCRIBED("이미 구독한 관심사입니다.", HttpStatus.CONFLICT),
+	SUBSCRIPTION_NOT_FOUND("구독 정보를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
 
 	// Comment
 	COMMENT_NOT_FOUND("댓글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
 
 	// Common
+	FORBIDDEN("권한이 없습니다.", HttpStatus.FORBIDDEN),
 	INTERNAL_SERVER_ERROR("서버 내부 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
 	VALIDATION_ERROR("요청 데이터 유효성 검사에 실패했습니다."),
 	;

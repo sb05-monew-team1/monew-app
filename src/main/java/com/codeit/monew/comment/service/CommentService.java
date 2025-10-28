@@ -1,5 +1,7 @@
 package com.codeit.monew.comment.service;
 
+import java.util.UUID;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -8,6 +10,7 @@ import com.codeit.monew.article.repository.ArticleRepository;
 import com.codeit.monew.comment.domain.Comment;
 import com.codeit.monew.comment.dto.CommentDto;
 import com.codeit.monew.comment.dto.CommentRegisterRequest;
+import com.codeit.monew.comment.dto.CommentUpdateRequest;
 import com.codeit.monew.comment.mapper.CommentMapper;
 import com.codeit.monew.comment.repository.CommentRepository;
 import com.codeit.monew.common.exception.BusinessException;
@@ -42,13 +45,15 @@ public class CommentService {
 	public CommentDto registerComment(CommentRegisterRequest request) {
 		log.info("댓글 등록 시작 - articleId: {}, userId: {}", request.articleId(), request.userId());
 
-		// 기사 존재 확인
+		// 기사 존재 확인 (수정완)
 		Article article = articleRepository.findById(request.articleId())
-			.orElseThrow(() -> new BusinessException(ErrorCode.ARTICLE_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(ErrorCode.ARTICLE_NOT_FOUND)
+				.addDetail("articleId", request.articleId()));
 
 		// 사용자 존재 확인
 		User user = userRepository.findById(request.userId())
-			.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND)
+				.addDetail("userId", request.userId()));
 
 		// Comment 엔티티 생성 (JPA 매핑)
 		Comment comment = Comment.builder()
@@ -65,5 +70,77 @@ public class CommentService {
 
 		// DTO 변환 후 반환 (JPA 매핑으로 user.getNickname() 바로 접근 가능)
 		return commentMapper.toDto(savedComment, savedComment.getUser().getNickname(), false);
+	}
+
+	/**
+	 * 댓글 수정
+	 * @param commentId 댓글 ID
+	 * @param requestUserId 요청자 ID
+	 * @param request 댓글 수정 요청
+	 * @return 수정된 댓글 정보
+	 */
+	@Transactional
+	public CommentDto updateComment(UUID commentId, UUID requestUserId, CommentUpdateRequest request) {
+		log.info("댓글 수정 시작 - commentId: {}, requestUserId: {}", commentId, requestUserId);
+
+		// 댓글 조회
+		Comment comment = commentRepository.findById(commentId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND)
+				.addDetail("commentId", commentId));
+
+		// 권한 확인 (본인이 작성한 댓글인지)
+		if (!comment.getUser().getId().equals(requestUserId)) {
+			log.warn("댓글 수정 권한 없음 - commentId: {}, commentUserId: {}, requestUserId: {}",
+				commentId, comment.getUser().getId(), requestUserId);
+			throw new BusinessException(ErrorCode.FORBIDDEN)
+				.addDetail("commentId", commentId)
+				.addDetail("requestUserId", requestUserId);
+		}
+
+		// 내용 수정
+		comment.updateContent(request.content());
+
+		log.info("댓글 수정 완료 - commentId: {}", commentId);
+
+		// DTO 변환 후 반환
+		return commentMapper.toDto(comment, comment.getUser().getNickname(), false);
+	}
+
+	/**
+	 * 댓글 논리 삭제
+	 * @param commentId 댓글 ID
+	 */
+	@Transactional
+	public void softDeleteComment(UUID commentId) {
+		log.info("댓글 논리 삭제 시작 - commentId: {}", commentId);
+
+		// 댓글 조회
+		Comment comment = commentRepository.findById(commentId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND)
+				.addDetail("commentId", commentId));
+
+		// 논리 삭제 (deletedAt 필드에 현재 시간 저장)
+		comment.softDelete();
+
+		log.info("댓글 논리 삭제 완료 - commentId: {}", commentId);
+	}
+
+	/**
+	 * 댓글 물리 삭제 (테스트용)
+	 * @param commentId 댓글 ID
+	 */
+	@Transactional
+	public void hardDeleteComment(UUID commentId) {
+		log.info("댓글 물리 삭제 시작 - commentId: {}", commentId);
+
+		// 댓글 조회
+		Comment comment = commentRepository.findById(commentId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND)
+				.addDetail("commentId", commentId));
+
+		// DB에서 완전 삭제
+		commentRepository.delete(comment);
+
+		log.info("댓글 물리 삭제 완료 - commentId: {}", commentId);
 	}
 }

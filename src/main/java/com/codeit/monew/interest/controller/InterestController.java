@@ -6,15 +6,21 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import com.codeit.monew.common.dto.CursorPageResponse;
 import com.codeit.monew.interest.dto.InterestDto;
 import com.codeit.monew.interest.dto.InterestRegisterRequest;
+import com.codeit.monew.interest.dto.InterestSearchRequest;
 import com.codeit.monew.interest.dto.InterestUpdateRequest;
+import com.codeit.monew.interest.dto.SubscriptionDto;
 import com.codeit.monew.interest.service.InterestService;
 
 import jakarta.validation.Valid;
@@ -59,6 +65,30 @@ public class InterestController {
 	) {
 		InterestDto updateInterest = interestService.updateInterest(interestId, request);
 		return ResponseEntity.ok(updateInterest);
+	}
+
+	/**
+	 * 관심사 목록 조회
+	 */
+	@GetMapping
+	public ResponseEntity<CursorPageResponse<InterestDto>> getInterest(
+		@Valid @ModelAttribute InterestSearchRequest request,
+		@RequestHeader("Monew-Request-User-ID") UUID userId
+	) {
+		CursorPageResponse<InterestDto> response = interestService.getInterests(request, userId);
+		return ResponseEntity.ok(response);
+	}
+
+	/**
+	 * 관심사 구독
+	 */
+	@PostMapping("{interestId}/subscriptions")
+	public ResponseEntity<SubscriptionDto> createSubscription(
+		@PathVariable UUID interestId,
+		@RequestHeader("Monew-Request-User-ID") UUID userId
+	) {
+		SubscriptionDto response = interestService.createSubscription(interestId, userId);
+		return ResponseEntity.ok(response);
 	}
 
 }

@@ -37,4 +37,14 @@ public class Interest extends BaseUpdatableDomain {
 	@Builder.Default
 	@OneToMany(mappedBy = "interest")
 	private List<InterestSubscription> subscriptions = new ArrayList<>();
+
+	public void increaseSubscriberCount() {
+		this.subscriberCount++;
+	}
+
+	public void decreaseSubscriberCount() {
+		if (this.subscriberCount > 0) {
+			this.subscriberCount--;
+		}
+	}
 }

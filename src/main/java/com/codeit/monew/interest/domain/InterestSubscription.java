@@ -1,6 +1,7 @@
 package com.codeit.monew.interest.domain;
 
 import com.codeit.monew.common.base.BaseDomain;
+import com.codeit.monew.user.domain.User;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -26,8 +27,8 @@ public class InterestSubscription extends BaseDomain {
 		foreignKey = @ForeignKey(name = "fk_subscription_interest"))
 	private Interest interest;
 
-/*	@ManyToOne(fetch = FetchType.LAZY)
+	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "user_id",
 		foreignKey = @ForeignKey(name = "fk_subscription_user"))
-	private User user;*/
+	private User user;
 }
