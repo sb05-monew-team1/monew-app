@@ -88,7 +88,7 @@ public class InterestService {
 	@Transactional
 	public void deleteInterest(UUID interestId) {
 		if (!interestRepository.existsById(interestId)) {
-			throw new NoSuchElementException("해당 id의 관심사를 찾을 수 없습니다");
+			throw new BusinessException(ErrorCode.INTEREST_NOT_FOUND);
 		}
 		interestRepository.deleteById(interestId);
 
@@ -100,7 +100,7 @@ public class InterestService {
 	@Transactional
 	public InterestDto updateInterest(UUID interestId, InterestUpdateRequest request) {
 		Interest interest = interestRepository.findById(interestId).orElseThrow(
-			() -> new NoSuchElementException("해당 id의 관심사를 찾을 수 없습니다.")
+			() -> new BusinessException(ErrorCode.INTEREST_NOT_FOUND)
 		);
 
 		Set<String> existingKeywordString = interest.getKeywords().stream()
@@ -189,10 +189,10 @@ public class InterestService {
 	@Transactional
 	public SubscriptionDto createSubscription(UUID interestId, UUID userId) {
 		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new BusinessException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
 		Interest interest = interestRepository.findById(interestId)
-			.orElseThrow(() -> new BusinessException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(ErrorCode.INTEREST_NOT_FOUND));
 
 		if (interestSubscriptionRepository.existsByUserAndInterest(user, interest)) {
 			throw new BusinessException(ErrorCode.ALREADY_SUBSCRIBED);
@@ -208,6 +208,25 @@ public class InterestService {
 		InterestSubscription savedSubscription = interestSubscriptionRepository.save(newSubscription);
 
 		return interestMapper.toDto(savedSubscription);
+	}
+
+	/**
+	 * 관심사 구독 취소
+	 */
+	@Transactional
+	public void deleteSubscription(UUID interestId, UUID userId){
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+		Interest interest = interestRepository.findById(interestId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.INTEREST_NOT_FOUND));
+
+		InterestSubscription subscription = interestSubscriptionRepository.findByUserAndInterest(user, interest)
+			.orElseThrow(() -> new BusinessException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
+
+		interestSubscriptionRepository.delete(subscription);
+
+		interest.decreaseSubscriberCount();
 	}
 
 	/**
