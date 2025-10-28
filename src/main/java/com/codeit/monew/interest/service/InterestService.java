@@ -211,6 +211,25 @@ public class InterestService {
 	}
 
 	/**
+	 * 관심사 구독 취소
+	 */
+	@Transactional
+	public void deleteSubscription(UUID interestId, UUID userId){
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+		Interest interest = interestRepository.findById(interestId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.INTEREST_NOT_FOUND));
+
+		InterestSubscription subscription = interestSubscriptionRepository.findByUserAndInterest(user, interest)
+			.orElseThrow(() -> new BusinessException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
+
+		interestSubscriptionRepository.delete(subscription);
+
+		interest.decreaseSubscriberCount();
+	}
+
+	/**
 	 * Querydsl Predicate를 생성하는 메서드
 	 */
 	private Predicate buildPredicate(String keyword, InterestOrder orderBy, String cursor, Instant after,
