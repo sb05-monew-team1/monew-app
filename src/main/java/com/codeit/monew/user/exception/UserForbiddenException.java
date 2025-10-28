@@ -7,6 +7,7 @@ public class UserForbiddenException extends UserException {
     super(ErrorCode.LOGIN_FAILED);
   }
 
+  //보류
   public UserForbiddenException(String resourceType, String resourceId){
     super(ErrorCode.LOGIN_FAILED);
     this.addDetail("resourceType", resourceType)

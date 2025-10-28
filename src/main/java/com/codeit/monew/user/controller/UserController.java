@@ -41,7 +41,7 @@ public class UserController {
       @PathVariable UUID userId,
       @Valid @RequestBody UserUpdateRequest userUpdateRequest
   ) {
-    UserDto updatedUser = userService.updateUserNickname(userId, userUpdateRequest);
+    UserDto updatedUser = userService.updateUserNickname(requestUserId, userId, userUpdateRequest);
     return ResponseEntity.ok(updatedUser);
   }
 

@@ -60,10 +60,10 @@ public class UserService {
 
   //2. 사용자 닉네임 수정
   @Transactional
-  public UserDto updateUserNickname(UUID userId, UserUpdateRequest userUpdateRequest){
+  public UserDto updateUserNickname(UUID userId,UUID userIdToUpdate, UserUpdateRequest userUpdateRequest){
     //요청한 사용자가 수정 대상 사용자인지 확인
-    if (!userId.equals(userId)) {
-      throw new UserForbiddenException(); // ForbiddenException 또는 유사 예외 발생 가정
+    if (!userId.equals(userIdToUpdate)) {
+      throw new UserForbiddenException();
     }
 
     //사용자 조회
