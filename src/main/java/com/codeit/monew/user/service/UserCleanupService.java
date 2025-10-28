@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class UserCleanupService {
   private final UserRepository userRepository;
-  /*
+
   //매시간 정각에 실행되어 논리 삭제 후 24시간이 지난 사용자 물리삭제함.
   @Scheduled(cron = "0 0 * * * ?") //매일 매시 정각(0분 0초)
   public void cleanupDeletedUsers() {
@@ -31,11 +31,13 @@ public class UserCleanupService {
     }
   }
 
-   */
-
+  /*
+  //테스트용 코드 (1분만에 삭제)
   @Scheduled(cron = "0 * * * * ?")
   public void cleanupDeletedUsersForTest() {
     Instant cutoffTime = Instant.now().minus(1, ChronoUnit.MINUTES);
     userRepository.deleteByDeletedAtBefore(cutoffTime);
   }
+
+   */
 }
