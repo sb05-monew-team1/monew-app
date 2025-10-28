@@ -88,7 +88,7 @@ public class InterestService {
 	@Transactional
 	public void deleteInterest(UUID interestId) {
 		if (!interestRepository.existsById(interestId)) {
-			throw new NoSuchElementException("해당 id의 관심사를 찾을 수 없습니다");
+			throw new BusinessException(ErrorCode.INTEREST_NOT_FOUND);
 		}
 		interestRepository.deleteById(interestId);
 
@@ -100,7 +100,7 @@ public class InterestService {
 	@Transactional
 	public InterestDto updateInterest(UUID interestId, InterestUpdateRequest request) {
 		Interest interest = interestRepository.findById(interestId).orElseThrow(
-			() -> new NoSuchElementException("해당 id의 관심사를 찾을 수 없습니다.")
+			() -> new BusinessException(ErrorCode.INTEREST_NOT_FOUND)
 		);
 
 		Set<String> existingKeywordString = interest.getKeywords().stream()
