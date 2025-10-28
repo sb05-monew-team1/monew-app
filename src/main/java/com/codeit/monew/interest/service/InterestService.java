@@ -189,10 +189,10 @@ public class InterestService {
 	@Transactional
 	public SubscriptionDto createSubscription(UUID interestId, UUID userId) {
 		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new BusinessException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
 		Interest interest = interestRepository.findById(interestId)
-			.orElseThrow(() -> new BusinessException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(ErrorCode.INTEREST_NOT_FOUND));
 
 		if (interestSubscriptionRepository.existsByUserAndInterest(user, interest)) {
 			throw new BusinessException(ErrorCode.ALREADY_SUBSCRIBED);
