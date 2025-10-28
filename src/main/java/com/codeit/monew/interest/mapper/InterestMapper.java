@@ -19,7 +19,7 @@ public interface InterestMapper {
 
 	@Mapping(target = "keywords", source = "interest.keywords")
 	@Mapping(target = "subscribedByMe", source = "subscribedByMe")
-	InterestDto toDto(Interest interest, boolean subscribedByMe);
+	InterestDto toDto(Interest interest, Boolean subscribedByMe);
 
 	@Mapping(source = "subscription.id", target = "id")
 	@Mapping(source = "subscription.interest.id", target = "interestId")
