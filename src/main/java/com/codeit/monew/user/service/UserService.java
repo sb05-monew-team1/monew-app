@@ -1,13 +1,11 @@
 package com.codeit.monew.user.service;
 
-import com.codeit.monew.common.exception.ErrorCode;
 import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.dto.UserDto;
 import com.codeit.monew.user.dto.UserRegisterRequest;
 import com.codeit.monew.user.dto.UserUpdateRequest;
 import com.codeit.monew.user.exception.UserAlreadyDeletedException;
 import com.codeit.monew.user.exception.UserAlreadyExistsException;
-import com.codeit.monew.user.exception.UserException;
 import com.codeit.monew.user.exception.UserNotSoftDeletedException;
 import com.codeit.monew.user.mapper.UserMapper;
 import com.codeit.monew.user.repository.UserRepository;
