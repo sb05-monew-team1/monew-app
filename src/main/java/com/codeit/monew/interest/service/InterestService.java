@@ -28,13 +28,17 @@ import com.codeit.monew.common.util.PageResponseMapper;
 import com.codeit.monew.interest.domain.Interest;
 import com.codeit.monew.interest.domain.InterestKeyword;
 import com.codeit.monew.interest.domain.InterestOrder;
+import com.codeit.monew.interest.domain.InterestSubscription;
 import com.codeit.monew.interest.dto.InterestDto;
 import com.codeit.monew.interest.dto.InterestRegisterRequest;
 import com.codeit.monew.interest.dto.InterestSearchRequest;
 import com.codeit.monew.interest.dto.InterestUpdateRequest;
+import com.codeit.monew.interest.dto.SubscriptionDto;
 import com.codeit.monew.interest.mapper.InterestMapper;
 import com.codeit.monew.interest.repository.InterestRepository;
 import com.codeit.monew.interest.repository.InterestSubscriptionRepository;
+import com.codeit.monew.user.domain.User;
+import com.codeit.monew.user.repository.UserRepository;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Predicate;
 
@@ -48,6 +52,7 @@ public class InterestService {
 	private final InterestSubscriptionRepository interestSubscriptionRepository;
 	private final InterestMapper interestMapper;
 	private final PageResponseMapper pageResponseMapper;
+	private final UserRepository userRepository;
 
 	private static final double SIMILARITY_THRESHOLD = 0.8;
 
@@ -176,6 +181,33 @@ public class InterestService {
 			nextCursor,
 			nextAfter,
 			totalElements);
+	}
+
+	/**
+	 * 관심사 구독
+	 */
+	@Transactional
+	public SubscriptionDto createSubscription(UUID interestId, UUID userId) {
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
+
+		Interest interest = interestRepository.findById(interestId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
+
+		if (interestSubscriptionRepository.existsByUserAndInterest(user, interest)) {
+			throw new BusinessException(ErrorCode.ALREADY_SUBSCRIBED);
+		}
+
+		InterestSubscription newSubscription = InterestSubscription.builder()
+			.user(user)
+			.interest(interest)
+			.build();
+
+		interest.increaseSubscriberCount();
+
+		InterestSubscription savedSubscription = interestSubscriptionRepository.save(newSubscription);
+
+		return interestMapper.toDto(savedSubscription);
 	}
 
 	/**
