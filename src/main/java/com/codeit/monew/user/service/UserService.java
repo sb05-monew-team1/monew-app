@@ -2,10 +2,13 @@ package com.codeit.monew.user.service;
 
 import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.dto.UserDto;
+import com.codeit.monew.user.dto.UserLoginRequest;
 import com.codeit.monew.user.dto.UserRegisterRequest;
 import com.codeit.monew.user.dto.UserUpdateRequest;
+import com.codeit.monew.user.exception.UserLoginFailedException;
 import com.codeit.monew.user.exception.UserAlreadyDeletedException;
 import com.codeit.monew.user.exception.UserAlreadyExistsException;
+import com.codeit.monew.user.exception.UserForbiddenException;
 import com.codeit.monew.user.exception.UserNotSoftDeletedException;
 import com.codeit.monew.user.mapper.UserMapper;
 import com.codeit.monew.user.repository.UserRepository;
@@ -58,6 +61,11 @@ public class UserService {
   //2. 사용자 닉네임 수정
   @Transactional
   public UserDto updateUserNickname(UUID userId, UserUpdateRequest userUpdateRequest){
+    //요청한 사용자가 수정 대상 사용자인지 확인
+    if (!userId.equals(userId)) {
+      throw new UserForbiddenException(); // ForbiddenException 또는 유사 예외 발생 가정
+    }
+
     //사용자 조회
     User user = userRepository.findById(userId)
         .orElseThrow(UserNotFoundException::new);
@@ -73,6 +81,11 @@ public class UserService {
   //3. 사용자 논리 삭제
   @Transactional
   public void deleteUser(UUID userId) {
+    if (!userId.equals(userId)) {
+      // 또는 관리자(ADMIN) 역할이 있다면 다른 사용자 삭제 허용 로직 추가
+      throw new UserForbiddenException();
+    }
+
     User user = userRepository.findById(userId)
         .orElseThrow(UserNotFoundException::new);
     if (user.getDeletedAt() != null) {
@@ -95,6 +108,22 @@ public class UserService {
     }
 
     userRepository.deleteById(user.getId());
+  }
+
+  public UserDto loginUser(UserLoginRequest userLoginRequest) {
+    //이메일로 사용자 조회
+    User user = userRepository.findByEmail(userLoginRequest.email())
+        .orElseThrow(UserNotFoundException::new);
+    //논리 삭제된 사용자인지 확인
+    if(user.getDeletedAt() != null) {
+      throw new UserAlreadyDeletedException(user.getId());
+    }
+    //비밀번호 비교
+    if(!passwordEncoder.matches(userLoginRequest.password(), user.getPassword())) {
+      throw new UserLoginFailedException(); //비밀번호 오류 예외하기
+    }
+
+    return userMapper.toUserDto(user);
   }
 
     /*
