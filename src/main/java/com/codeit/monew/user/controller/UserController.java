@@ -1,6 +1,5 @@
 package com.codeit.monew.user.controller;
 
-import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.dto.UserDto;
 import com.codeit.monew.user.dto.UserLoginRequest;
 import com.codeit.monew.user.dto.UserRegisterRequest;
