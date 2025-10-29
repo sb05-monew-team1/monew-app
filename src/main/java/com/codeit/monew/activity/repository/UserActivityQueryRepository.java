@@ -2,6 +2,7 @@ package com.codeit.monew.activity.repository;
 
 import java.util.UUID;
 
+import com.codeit.monew.activity.domain.UserActivity;
 import com.codeit.monew.article.dto.ArticleViewDto;
 import com.codeit.monew.comment.dto.CommentActivityDto;
 import com.codeit.monew.comment.dto.CommentLikeActivityDto;
@@ -9,6 +10,8 @@ import com.codeit.monew.interest.dto.SubscriptionDto;
 import com.codeit.monew.user.domain.User;
 
 public interface UserActivityQueryRepository {
+
+	UserActivity getUserActivity(UUID userId);
 
 	void createUserActivity(User user);
 

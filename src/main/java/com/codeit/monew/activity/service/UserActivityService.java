@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.codeit.monew.activity.domain.UserActivity;
 import com.codeit.monew.activity.dto.UserActivityDto;
+import com.codeit.monew.activity.mapper.UserActivityMapper;
 import com.codeit.monew.activity.repository.UserActivityRepository;
 import com.codeit.monew.article.dto.ArticleViewDto;
 import com.codeit.monew.comment.dto.CommentActivityDto;
@@ -28,9 +29,12 @@ public class UserActivityService {
 
 	private final MongoTemplate mongoTemplate;
 	private final UserActivityRepository userActivityRepository;
+	private final UserActivityMapper  userActivityMapper;
 
-	public UserActivityDto getUserActivityInfo(String userId) {
-		return null;
+	public UserActivityDto getUserActivityInfo(UUID userId) {
+		UserActivity userActivity = userActivityRepository.getUserActivity(userId);
+
+		return userActivityMapper.toUserActivityDto(userActivity);
 	}
 
 	@Transactional

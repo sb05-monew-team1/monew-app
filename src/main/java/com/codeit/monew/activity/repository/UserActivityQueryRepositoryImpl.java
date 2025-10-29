@@ -26,6 +26,28 @@ public class UserActivityQueryRepositoryImpl implements UserActivityQueryReposit
 	private final MongoTemplate mongoTemplate;
 
 	@Override
+	public UserActivity getUserActivity(UUID userId) {
+		Query query = new Query(Criteria.where("_id").is(userId));
+
+		query.fields()
+			.include("_id")
+			.include("email")
+			.include("nickname")
+			.include("createdAt")
+			.include("subscriptions")
+			.slice("comments", 10)
+			.slice("commentLikes", 10)
+			.slice("articleViews", 10);
+
+		UserActivity userActivity = mongoTemplate.findOne(query, UserActivity.class);
+		if (userActivity != null) {
+			throw new RuntimeException("유저의 활동 내역이 존재하지 않습니다.");
+		}
+
+		return userActivity;
+	}
+
+	@Override
 	public void createUserActivity(User user) {
 		UserActivity userActivity = new UserActivity();
 		userActivity.setId(user.getId());
