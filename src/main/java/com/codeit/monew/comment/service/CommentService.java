@@ -166,6 +166,14 @@ public class CommentService {
 			.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND)
 				.addDetail("userId", userId));
 
+		// 이미 좋아요를 눌렀는지 확인
+		if (commentLikeRepository.existsByCommentAndUser(comment, user)) {
+			log.warn("이미 좋아요를 누른 댓글 - commentId: {}, userId: {}", commentId, userId);
+			throw new BusinessException(ErrorCode.COMMENT_LIKE_ALREADY_EXISTS)
+				.addDetail("commentId", commentId)
+				.addDetail("userId", userId);
+		}
+
 		// CommentLike 생성 및 저장
 		CommentLike commentLike = CommentLike.builder()
 			.comment(comment)
