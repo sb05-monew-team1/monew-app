@@ -13,6 +13,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.codeit.monew.common.exception.BusinessException;
+import com.codeit.monew.common.exception.ErrorCode;
 import com.codeit.monew.interest.repository.InterestRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,9 +49,12 @@ class InterestServiceTest {
 		when(interestRepository.existsById(nonExistentId)).thenReturn(false);
 
 		// when & then
-		assertThrows(NoSuchElementException.class, () -> {
+		BusinessException exception = assertThrows(BusinessException.class, () -> {
 			interestService.deleteInterest(nonExistentId);
 		});
+
+		assertEquals(ErrorCode.INTEREST_NOT_FOUND, exception.getErrorCode());
+
 		verify(interestRepository, never()).deleteById(nonExistentId);
 	}
 }
