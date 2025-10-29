@@ -63,11 +63,12 @@ public class UserService {
   public UserDto updateUserNickname(UUID userId,UUID userIdToUpdate, UserUpdateRequest userUpdateRequest){
     //요청한 사용자가 수정 대상 사용자인지 확인
     if (!userId.equals(userIdToUpdate)) {
+      //관리자확인 로직 추가?
       throw new UserForbiddenException();
     }
 
     //사용자 조회
-    User user = userRepository.findById(userId)
+    User user = userRepository.findById(userIdToUpdate)
         .orElseThrow(UserNotFoundException::new);
     //닉네임 중복 검사 필요시 구현
 
@@ -80,17 +81,17 @@ public class UserService {
 
   //3. 사용자 논리 삭제
   @Transactional
-  public void deleteUser(UUID userId) {
-    if (!userId.equals(userId)) {
+  public void deleteUser(UUID userId, UUID userIdToDelete) {
+    if (!userId.equals(userIdToDelete)) {
       // 또는 관리자(ADMIN) 역할이 있다면 다른 사용자 삭제 허용 로직 추가
       throw new UserForbiddenException();
     }
 
-    User user = userRepository.findById(userId)
+    User user = userRepository.findById(userIdToDelete)
         .orElseThrow(UserNotFoundException::new);
     if (user.getDeletedAt() != null) {
       // 이미 삭제된 사용자에 대해 삭제를 요청하면 "상태 충돌" 예외 발생
-      throw new UserAlreadyDeletedException(userId);
+      throw new UserAlreadyDeletedException(userIdToDelete);
     }
 
     //논리삭제 메서드 호출
@@ -99,12 +100,12 @@ public class UserService {
 
   //4. 사용자 물리 삭제
   @Transactional
-  public void hardDeleteUser(UUID userId) {
-    User user = userRepository.findById(userId)
+  public void hardDeleteUser(UUID loggedInUserId, UUID userIdToDelete) {
+    User user = userRepository.findById(userIdToDelete)
         .orElseThrow(UserNotFoundException::new);
     if (user.getDeletedAt() == null) {
       // 활성화된 사용자를 물리 삭제하려 하면 예외 발생
-      throw new UserNotSoftDeletedException(userId);
+      throw new UserNotSoftDeletedException(userIdToDelete);
     }
 
     userRepository.deleteById(user.getId());
