@@ -1,5 +1,7 @@
 package com.codeit.monew.activity.controller;
 
+import java.util.UUID;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,6 +22,6 @@ public class UserActivityController {
 
 	@GetMapping("/{userId}")
 	public ResponseEntity<UserActivityDto> getUserActivity(@PathVariable String userId) {
-		return ResponseEntity.ok(userActivityService.getUserActivityInfo(userId));
+		return ResponseEntity.ok(userActivityService.getUserActivityInfo(UUID.fromString(userId)));
 	}
 }
