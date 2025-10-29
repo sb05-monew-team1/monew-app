@@ -38,7 +38,7 @@ public class UserController {
   //닉네임수정
   @PatchMapping("/{userId}")
   public ResponseEntity<UserDto> updateUser(
-      //@RequestHeader("Monew-Request-User-ID") UUID requestUserId, //헤더추가
+      @RequestHeader("Monew-Request-User-ID") UUID requestUserId, //헤더추가
       @PathVariable UUID userId,
       @Valid @RequestBody UserUpdateRequest userUpdateRequest,
       HttpSession session
