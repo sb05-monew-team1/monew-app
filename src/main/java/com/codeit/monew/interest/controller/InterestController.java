@@ -25,7 +25,9 @@ import com.codeit.monew.interest.service.InterestService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Controller
 @RequestMapping("/api/interests")
 @RequiredArgsConstructor
@@ -40,6 +42,8 @@ public class InterestController {
 	public ResponseEntity<InterestDto> createInterest(
 		@Valid @RequestBody InterestRegisterRequest request
 	) {
+		log.info("POST /api/interests");
+
 		InterestDto response = interestService.createInterest(request);
 		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
@@ -51,6 +55,8 @@ public class InterestController {
 	public ResponseEntity<Void> deleteInterest(
 		@PathVariable UUID interestId
 	) {
+		log.info("DELETE /api/interests/{}", interestId);
+
 		interestService.deleteInterest(interestId);
 		return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
 	}
@@ -63,6 +69,8 @@ public class InterestController {
 		@PathVariable UUID interestId,
 		@Valid @RequestBody InterestUpdateRequest request
 	) {
+		log.info("PATCH /api/interests/{}", interestId);
+
 		InterestDto updateInterest = interestService.updateInterest(interestId, request);
 		return ResponseEntity.ok(updateInterest);
 	}
@@ -75,6 +83,8 @@ public class InterestController {
 		@Valid @ModelAttribute InterestSearchRequest request,
 		@RequestHeader("Monew-Request-User-ID") UUID userId
 	) {
+		log.info("GET /api/interests");
+
 		CursorPageResponse<InterestDto> response = interestService.getInterests(request, userId);
 		return ResponseEntity.ok(response);
 	}
@@ -87,6 +97,8 @@ public class InterestController {
 		@PathVariable UUID interestId,
 		@RequestHeader("Monew-Request-User-ID") UUID userId
 	) {
+		log.info("POST /api/interests/{}/subscriptions", interestId);
+
 		SubscriptionDto response = interestService.createSubscription(interestId, userId);
 		return ResponseEntity.ok(response);
 	}
@@ -99,6 +111,8 @@ public class InterestController {
 		@PathVariable UUID interestId,
 		@RequestHeader("Monew-Request-User-ID") UUID userId
 	) {
+		log.info("DELETE /api/interests/{}/subscriptions", interestId);
+
 		interestService.deleteSubscription(interestId, userId);
 		return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
 	}
