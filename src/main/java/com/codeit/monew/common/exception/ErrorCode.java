@@ -27,6 +27,8 @@ public enum ErrorCode {
 
 	// Comment
 	COMMENT_NOT_FOUND("댓글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+	COMMENT_LIKE_ALREADY_EXISTS("이미 좋아요를 누른 댓글입니다.", HttpStatus.CONFLICT),
+	COMMENT_LIKE_NOT_FOUND("좋아요를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
 
 	// Common
 	FORBIDDEN("권한이 없습니다.", HttpStatus.FORBIDDEN),

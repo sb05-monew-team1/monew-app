@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import com.codeit.monew.comment.dto.CommentDto;
+import com.codeit.monew.comment.dto.CommentLikeRequest;
 import com.codeit.monew.comment.dto.CommentRegisterRequest;
 import com.codeit.monew.comment.dto.CommentUpdateRequest;
 import com.codeit.monew.comment.service.CommentService;
@@ -83,5 +84,35 @@ public class CommentController {
 	public void hardDeleteComment(@PathVariable UUID commentId) {
 		log.info("댓글 물리 삭제 API 호출 - commentId: {}", commentId);
 		commentService.hardDeleteComment(commentId);
+	}
+
+	/**
+	 * 댓글 좋아요 등록
+	 * @param commentId 댓글 ID
+	 * @param request 좋아요 등록 요청 (userId 포함)
+	 */
+	@PostMapping("/{commentId}/comment-likes")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void likeComment(
+		@PathVariable UUID commentId,
+		@Validated @RequestBody CommentLikeRequest request
+	) {
+		log.info("댓글 좋아요 등록 API 호출 - commentId: {}, userId: {}", commentId, request.userId());
+		commentService.likeComment(commentId, request.userId());
+	}
+
+	/**
+	 * 댓글 좋아요 취소
+	 * @param commentId 댓글 ID
+	 * @param request 좋아요 취소 요청 (userId 포함)
+	 */
+	@DeleteMapping("/{commentId}/comment-likes")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void unlikeComment(
+		@PathVariable UUID commentId,
+		@Validated @RequestBody CommentLikeRequest request
+	) {
+		log.info("댓글 좋아요 취소 API 호출 - commentId: {}, userId: {}", commentId, request.userId());
+		commentService.unlikeComment(commentId, request.userId());
 	}
 }
