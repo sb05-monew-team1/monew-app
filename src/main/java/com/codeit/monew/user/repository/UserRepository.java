@@ -1,11 +1,12 @@
 package com.codeit.monew.user.repository;
 
 import com.codeit.monew.user.domain.User;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.repository.CrudRepository;
+import org.springframework.transaction.annotation.Transactional;
 
 //User 엔티티의 데이터 접근..
 public interface UserRepository extends JpaRepository<User, UUID> {
@@ -17,5 +18,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
   //닉네임 수정시 중복 검사 (프로토타입엔 없음)
 
-
+  @Transactional
+  void deleteByDeletedAtBefore(Instant cutoffTime);
 }
