@@ -17,6 +17,8 @@ import com.codeit.monew.comment.repository.CommentLikeRepository;
 import com.codeit.monew.comment.repository.CommentRepository;
 import com.codeit.monew.common.exception.BusinessException;
 import com.codeit.monew.common.exception.ErrorCode;
+import com.codeit.monew.notification.dto.NotificationCreateRequest;
+import com.codeit.monew.notification.service.NotificationService;
 import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.repository.UserRepository;
 
@@ -37,6 +39,7 @@ public class CommentService {
 	private final UserRepository userRepository;
 	private final ArticleRepository articleRepository;
 	private final CommentMapper commentMapper;
+	private final NotificationService notificationService;
 
 	/**
 	 * 댓글 등록
@@ -185,6 +188,20 @@ public class CommentService {
 		comment.increaseLikeCount();
 
 		log.info("댓글 좋아요 등록 완료 - commentId: {}, userId: {}", commentId, userId);
+
+		if (!comment.getUser().getId().equals(userId)) {
+			String notificationMsg = user.getNickname() + "님이 나의 댓글을 좋아합니다.";
+			NotificationCreateRequest notificationCreateRequest = new NotificationCreateRequest(
+				comment.getUser().getId(),
+				notificationMsg,
+				"commentLike",
+				user.getId()
+			);
+
+			System.out.println("댓글 좋아요 알림 생성 : " + notificationService.create(notificationCreateRequest));
+			// notificationService.create(notificationCreateRequest);
+		}
+
 	}
 
 	/**
