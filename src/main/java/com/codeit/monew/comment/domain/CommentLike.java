@@ -1,5 +1,6 @@
 package com.codeit.monew.comment.domain;
 
+import com.codeit.monew.common.base.BaseDomain;
 import com.codeit.monew.common.base.BaseUpdatableDomain;
 import com.codeit.monew.user.domain.User;
 
@@ -29,7 +30,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-public class CommentLike extends BaseUpdatableDomain {
+public class CommentLike extends BaseDomain {
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "comment_id", nullable = false)

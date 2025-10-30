@@ -2,10 +2,13 @@ package com.codeit.monew.user.service;
 
 import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.dto.UserDto;
+import com.codeit.monew.user.dto.UserLoginRequest;
 import com.codeit.monew.user.dto.UserRegisterRequest;
 import com.codeit.monew.user.dto.UserUpdateRequest;
+import com.codeit.monew.user.exception.UserLoginFailedException;
 import com.codeit.monew.user.exception.UserAlreadyDeletedException;
 import com.codeit.monew.user.exception.UserAlreadyExistsException;
+import com.codeit.monew.user.exception.UserForbiddenException;
 import com.codeit.monew.user.exception.UserNotSoftDeletedException;
 import com.codeit.monew.user.mapper.UserMapper;
 import com.codeit.monew.user.repository.UserRepository;
@@ -57,11 +60,22 @@ public class UserService {
 
   //2. 사용자 닉네임 수정
   @Transactional
-  public UserDto updateUserNickname(UUID userId, UserUpdateRequest userUpdateRequest){
+  public UserDto updateUserNickname(UUID userId,UUID userIdToUpdate, UserUpdateRequest userUpdateRequest){
+    //요청한 사용자가 수정 대상 사용자인지 확인
+    if (!userId.equals(userIdToUpdate)) {
+      //관리자확인 로직 추가?
+      throw new UserForbiddenException();
+    }
+
     //사용자 조회
-    User user = userRepository.findById(userId)
+    User user = userRepository.findById(userIdToUpdate)
         .orElseThrow(UserNotFoundException::new);
     //닉네임 중복 검사 필요시 구현
+
+    //논리삭제시 닉네임 수정 못 하게
+    if(user.getDeletedAt() != null){
+      throw new UserAlreadyDeletedException(userIdToUpdate);
+    }
 
     //엔티티의 도메인 메서드를 호출하여 닉네임 변경
     user.updateNickname(userUpdateRequest.nickname());
@@ -72,12 +86,17 @@ public class UserService {
 
   //3. 사용자 논리 삭제
   @Transactional
-  public void deleteUser(UUID userId) {
-    User user = userRepository.findById(userId)
+  public void deleteUser(UUID userId, UUID userIdToDelete) {
+    if (!userId.equals(userIdToDelete)) {
+      // 또는 관리자(ADMIN) 역할이 있다면 다른 사용자 삭제 허용 로직 추가
+      throw new UserForbiddenException();
+    }
+
+    User user = userRepository.findById(userIdToDelete)
         .orElseThrow(UserNotFoundException::new);
     if (user.getDeletedAt() != null) {
       // 이미 삭제된 사용자에 대해 삭제를 요청하면 "상태 충돌" 예외 발생
-      throw new UserAlreadyDeletedException(userId);
+      throw new UserAlreadyDeletedException(userIdToDelete);
     }
 
     //논리삭제 메서드 호출
@@ -86,15 +105,31 @@ public class UserService {
 
   //4. 사용자 물리 삭제
   @Transactional
-  public void hardDeleteUser(UUID userId) {
-    User user = userRepository.findById(userId)
+  public void hardDeleteUser(UUID loggedInUserId, UUID userIdToDelete) {
+    User user = userRepository.findById(userIdToDelete)
         .orElseThrow(UserNotFoundException::new);
     if (user.getDeletedAt() == null) {
       // 활성화된 사용자를 물리 삭제하려 하면 예외 발생
-      throw new UserNotSoftDeletedException(userId);
+      throw new UserNotSoftDeletedException(userIdToDelete);
     }
 
     userRepository.deleteById(user.getId());
+  }
+
+  public UserDto loginUser(UserLoginRequest userLoginRequest) {
+    //이메일로 사용자 조회
+    User user = userRepository.findByEmail(userLoginRequest.email())
+        .orElseThrow(UserNotFoundException::new);
+    //논리 삭제된 사용자인지 확인
+    if(user.getDeletedAt() != null) {
+      throw new UserAlreadyDeletedException(user.getId());
+    }
+    //비밀번호 비교
+    if(!passwordEncoder.matches(userLoginRequest.password(), user.getPassword())) {
+      throw new UserLoginFailedException(); //비밀번호 오류 예외하기
+    }
+
+    return userMapper.toUserDto(user);
   }
 
     /*

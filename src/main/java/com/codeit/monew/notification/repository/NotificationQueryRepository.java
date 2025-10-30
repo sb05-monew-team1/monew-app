@@ -1,12 +1,13 @@
 package com.codeit.monew.notification.repository;
 
 import java.time.Instant;
-import java.util.List;
+
+import org.springframework.data.domain.Slice;
 
 import com.codeit.monew.notification.dto.NotificationDto;
 
 public interface NotificationQueryRepository {
-	List<NotificationDto> search(
+	Slice<NotificationDto> search(
 		String cursor,
 		Instant after,
 		int limit,
