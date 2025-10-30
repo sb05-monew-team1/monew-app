@@ -72,6 +72,11 @@ public class UserService {
         .orElseThrow(UserNotFoundException::new);
     //닉네임 중복 검사 필요시 구현
 
+    //논리삭제시 닉네임 수정 못 하게
+    if(user.getDeletedAt() != null){
+      throw new UserAlreadyDeletedException(userIdToUpdate);
+    }
+
     //엔티티의 도메인 메서드를 호출하여 닉네임 변경
     user.updateNickname(userUpdateRequest.nickname());
 
