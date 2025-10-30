@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -38,7 +37,7 @@ public class UserController {
   //닉네임수정
   @PatchMapping("/{userId}")
   public ResponseEntity<UserDto> updateUser(
-      @RequestHeader("Monew-Request-User-ID") UUID requestUserId, //헤더추가
+      //@RequestHeader("Monew-Request-User-ID") UUID requestUserId, //헤더추가
       @PathVariable UUID userId,
       @Valid @RequestBody UserUpdateRequest userUpdateRequest,
       HttpSession session
@@ -69,7 +68,7 @@ public class UserController {
   //회원물리삭제
   @DeleteMapping("/{userId}/hard")
   public ResponseEntity<Void> hardDeleteUser(
-      @RequestHeader("Monew-Request-User-ID") UUID requestUserId, //로깅,감사 등..
+      //@RequestHeader("Monew-Request-User-ID") UUID requestUserId, //로깅,감사 등..
       @PathVariable UUID userId,
       HttpSession session
   ) {
