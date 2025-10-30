@@ -4,9 +4,11 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 
 import com.codeit.monew.common.dto.CursorPageResponse;
+import com.codeit.monew.common.util.PageResponseMapper;
 import com.codeit.monew.notification.domain.Notification;
 import com.codeit.monew.notification.dto.NotificationCreateRequest;
 import com.codeit.monew.notification.dto.NotificationDto;
@@ -21,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 public class NotificationService {
 	private final NotificationRepository notificationRepository;
 	private final UserRepository userRepository;
+	private final PageResponseMapper pageResponseMapper;
 
 	public Notification create(NotificationCreateRequest request) {
 		User user = userRepository.findById(request.userId())
@@ -44,26 +47,26 @@ public class NotificationService {
 		int limit,
 		String monewRequestUserId
 	) {
-		List<NotificationDto> rowPlusOne = notificationRepository.search(
+		Slice<NotificationDto> slice = notificationRepository.search(
 			cursor,
 			after,
 			limit,
 			monewRequestUserId
 		);
-		boolean hasNext = rowPlusOne.size() > limit;
-		List<NotificationDto> content = hasNext ? rowPlusOne.subList(0, limit) : rowPlusOne;
-		String nextCursor = hasNext ? content.get(content.size() - 1).createdAt().toString() : null;
-		String nextAfter = hasNext ? content.get(content.size() - 1).createdAt().toString() : null;
+
+		String nextCursor = null;
+		String nextAfter = null;
+
+		if (slice.hasNext() && slice.getNumberOfElements() > 0) {
+			NotificationDto last = slice.getContent().get(slice.getNumberOfElements() - 1);
+
+			nextAfter = last.createdAt().toString();
+			nextCursor = last.createdAt().toString();
+		}
+
 		long totalElements = notificationRepository.countUnConfirmed(monewRequestUserId);
 
-		return new CursorPageResponse<>(
-			content,
-			nextCursor,
-			nextAfter,
-			limit,
-			totalElements,
-			hasNext
-		);
+		return pageResponseMapper.toCursorPageResponse(slice, nextCursor, nextAfter, totalElements);
 	}
 
 	public void checkAllNotifications(String monewRequestUserId) {

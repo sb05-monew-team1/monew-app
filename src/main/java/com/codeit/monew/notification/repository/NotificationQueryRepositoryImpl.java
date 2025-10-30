@@ -4,8 +4,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.stereotype.Repository;
-
 import com.codeit.monew.notification.domain.QNotification;
 import com.codeit.monew.notification.dto.NotificationDto;
 import com.codeit.monew.user.domain.QUser;
@@ -26,12 +28,13 @@ public class NotificationQueryRepositoryImpl implements NotificationQueryReposit
 	private static final QUser u = QUser.user;
 
 	@Override
-	public List<NotificationDto> search(
+	public Slice<NotificationDto> search(
 		String cursor,
 		Instant after,
 		int limit,
 		String monewRequestUserId
 	) {
+		System.out.println("메서드 호출 후 cursor : " + cursor + ", after : " + after + "userId: " + monewRequestUserId);
 		BooleanBuilder builder = new BooleanBuilder();
 		builder.and(n.confirmed.eq(false));
 		if (monewRequestUserId != null && !monewRequestUserId.isBlank()) {
@@ -40,14 +43,17 @@ public class NotificationQueryRepositoryImpl implements NotificationQueryReposit
 		}
 		if (cursor != null && !cursor.isBlank()) {
 			Instant cursorTime = Instant.parse(cursor);
-			builder.and(n.createdAt.lt(cursorTime));
+			builder.and(n.createdAt.gt(cursorTime));
+		} else {
+			if (after != null) {
+				builder.and(n.createdAt.gt(after));
+			}
 		}
-		if (after != null) {
-			builder.and(n.createdAt.gt(after));
-		}
-		OrderSpecifier<?> orderByTime = new OrderSpecifier<>(Order.DESC, n.createdAt);
+		OrderSpecifier<?> orderByTime = new OrderSpecifier<>(Order.ASC, n.createdAt);
 
-		return queryFactory
+		System.out.println("경우: " + builder);
+
+		List<NotificationDto> rowsPlusOne = queryFactory
 			.select(Projections.constructor(
 				NotificationDto.class,
 				n.id, n.createdAt, n.updatedAt,
@@ -55,11 +61,18 @@ public class NotificationQueryRepositoryImpl implements NotificationQueryReposit
 				n.resourceId
 			))
 			.from(n)
-			.join(n.user, u)
+			.distinct()
+			.leftJoin(n.user, u)
 			.where(builder)
 			.orderBy(orderByTime)
 			.limit(limit + 1L)
 			.fetch();
+
+		boolean hasNext= rowsPlusOne.size() > limit;
+		List<NotificationDto> content = hasNext ? rowsPlusOne.subList(0, limit) : rowsPlusOne;
+
+		Pageable pageable = Pageable.ofSize(limit);
+		return new SliceImpl<>(content, pageable, hasNext);
 	}
 
 	@Override
