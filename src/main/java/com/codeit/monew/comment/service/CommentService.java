@@ -8,10 +8,12 @@ import org.springframework.transaction.annotation.Transactional;
 import com.codeit.monew.article.domain.Article;
 import com.codeit.monew.article.repository.ArticleRepository;
 import com.codeit.monew.comment.domain.Comment;
+import com.codeit.monew.comment.domain.CommentLike;
 import com.codeit.monew.comment.dto.CommentDto;
 import com.codeit.monew.comment.dto.CommentRegisterRequest;
 import com.codeit.monew.comment.dto.CommentUpdateRequest;
 import com.codeit.monew.comment.mapper.CommentMapper;
+import com.codeit.monew.comment.repository.CommentLikeRepository;
 import com.codeit.monew.comment.repository.CommentRepository;
 import com.codeit.monew.common.exception.BusinessException;
 import com.codeit.monew.common.exception.ErrorCode;
@@ -31,6 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 public class CommentService {
 
 	private final CommentRepository commentRepository;
+	private final CommentLikeRepository commentLikeRepository;
 	private final UserRepository userRepository;
 	private final ArticleRepository articleRepository;
 	private final CommentMapper commentMapper;
@@ -142,5 +145,79 @@ public class CommentService {
 		commentRepository.delete(comment);
 
 		log.info("댓글 물리 삭제 완료 - commentId: {}", commentId);
+	}
+
+	/**
+	 * 댓글 좋아요 등록
+	 * @param commentId 댓글 ID
+	 * @param userId 사용자 ID
+	 */
+	@Transactional
+	public void likeComment(UUID commentId, UUID userId) {
+		log.info("댓글 좋아요 등록 시작 - commentId: {}, userId: {}", commentId, userId);
+
+		// 댓글 조회
+		Comment comment = commentRepository.findById(commentId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND)
+				.addDetail("commentId", commentId));
+
+		// 사용자 조회
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND)
+				.addDetail("userId", userId));
+
+		// 이미 좋아요를 눌렀는지 확인
+		if (commentLikeRepository.existsByCommentAndUser(comment, user)) {
+			log.warn("이미 좋아요를 누른 댓글 - commentId: {}, userId: {}", commentId, userId);
+			throw new BusinessException(ErrorCode.COMMENT_LIKE_ALREADY_EXISTS)
+				.addDetail("commentId", commentId)
+				.addDetail("userId", userId);
+		}
+
+		// CommentLike 생성 및 저장
+		CommentLike commentLike = CommentLike.builder()
+			.comment(comment)
+			.user(user)
+			.build();
+		commentLikeRepository.save(commentLike);
+
+		// 댓글의 좋아요 수 증가
+		comment.increaseLikeCount();
+
+		log.info("댓글 좋아요 등록 완료 - commentId: {}, userId: {}", commentId, userId);
+	}
+
+	/**
+	 * 댓글 좋아요 취소
+	 * @param commentId 댓글 ID
+	 * @param userId 사용자 ID
+	 */
+	@Transactional
+	public void unlikeComment(UUID commentId, UUID userId) {
+		log.info("댓글 좋아요 취소 시작 - commentId: {}, userId: {}", commentId, userId);
+
+		// 댓글 조회
+		Comment comment = commentRepository.findById(commentId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND)
+				.addDetail("commentId", commentId));
+
+		// 사용자 조회
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND)
+				.addDetail("userId", userId));
+
+		// 좋아요 기록 조회
+		CommentLike commentLike = commentLikeRepository.findByCommentAndUser(comment, user)
+			.orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_LIKE_NOT_FOUND)
+				.addDetail("commentId", commentId)
+				.addDetail("userId", userId));
+
+		// CommentLike 삭제
+		commentLikeRepository.delete(commentLike);
+
+		// 댓글의 좋아요 수 감소
+		comment.decreaseLikeCount();
+
+		log.info("댓글 좋아요 취소 완료 - commentId: {}, userId: {}", commentId, userId);
 	}
 }

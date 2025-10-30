@@ -6,7 +6,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -43,7 +42,9 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Predicate;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class InterestService {
@@ -61,6 +62,8 @@ public class InterestService {
 	 */
 	@Transactional
 	public InterestDto createInterest(InterestRegisterRequest request) {
+		log.debug("관심사 등록 시작 - name: {}", request.name());
+
 		validateSimilarName(request.name());
 
 		Interest interest = Interest.builder()
@@ -78,8 +81,13 @@ public class InterestService {
 		});
 
 		Interest savedInterest = interestRepository.save(interest);
+		log.info("관심사 등록 - id: {}, name: {}, keywords: {}",
+			savedInterest.getId(), savedInterest.getName(),
+			savedInterest.getKeywords().stream()
+				.map(InterestKeyword::getKeyword)
+				.collect(Collectors.joining(", ")));
 
-		return interestMapper.toDto(savedInterest, false);
+		return interestMapper.toDto(savedInterest, null);
 	}
 
 	/**
@@ -87,11 +95,13 @@ public class InterestService {
 	 */
 	@Transactional
 	public void deleteInterest(UUID interestId) {
+		log.debug("요청 관심사 존재 확인 - interestId: {}", interestId);
+
 		if (!interestRepository.existsById(interestId)) {
 			throw new BusinessException(ErrorCode.INTEREST_NOT_FOUND);
 		}
 		interestRepository.deleteById(interestId);
-
+		log.info("관심사 삭제 - interestId: {}", interestId);
 	}
 
 	/**
@@ -99,6 +109,8 @@ public class InterestService {
 	 */
 	@Transactional
 	public InterestDto updateInterest(UUID interestId, InterestUpdateRequest request) {
+		log.debug("관심사 정보 수정 시작 - interestId: {}", interestId);
+
 		Interest interest = interestRepository.findById(interestId).orElseThrow(
 			() -> new BusinessException(ErrorCode.INTEREST_NOT_FOUND)
 		);
@@ -123,7 +135,12 @@ public class InterestService {
 			}
 		});
 
-		return interestMapper.toDto(interest, false);
+		log.info("관심사 정보 수정 - id: {}, name: {}, keywords: {}", interest.getId(), interest.getName(),
+			interest.getKeywords().stream()
+				.map(InterestKeyword::getKeyword)
+				.collect(Collectors.joining(", ")));
+
+		return interestMapper.toDto(interest, null);
 	}
 
 	/**
@@ -131,6 +148,9 @@ public class InterestService {
 	 */
 	@Transactional
 	public CursorPageResponse<InterestDto> getInterests(InterestSearchRequest request, UUID userId) {
+		log.debug("관심사 목록 조회 요청 - userId: {}, orderBy: {}, direction: {}, limit: {}",
+			userId, request.orderBy(), request.direction(), request.limit());
+
 		Sort.Direction sortDirection =
 			"DESC".equalsIgnoreCase(request.direction()) ? Sort.Direction.DESC : Sort.Direction.ASC;
 		Sort primarySort = Sort.by(sortDirection, request.orderBy().name());
@@ -155,6 +175,7 @@ public class InterestService {
 		}
 
 		if (interestSlice.getContent().isEmpty()) {
+			log.debug("요청 관심사를 찾을 수 없습니다.");
 			return pageResponseMapper.toCursorPageResponse(
 				new SliceImpl<>(List.of(), interestSlice.getPageable(), false),
 				null,
@@ -188,11 +209,17 @@ public class InterestService {
 	 */
 	@Transactional
 	public SubscriptionDto createSubscription(UUID interestId, UUID userId) {
+		log.debug("관심사 구독 시작 - userId: {}, interestId: {}", userId, interestId);
+
 		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+			.orElseThrow(() -> {
+				return new BusinessException(ErrorCode.USER_NOT_FOUND);
+			});
 
 		Interest interest = interestRepository.findById(interestId)
-			.orElseThrow(() -> new BusinessException(ErrorCode.INTEREST_NOT_FOUND));
+			.orElseThrow(() -> {
+				return new BusinessException(ErrorCode.INTEREST_NOT_FOUND);
+			});
 
 		if (interestSubscriptionRepository.existsByUserAndInterest(user, interest)) {
 			throw new BusinessException(ErrorCode.ALREADY_SUBSCRIBED);
@@ -206,6 +233,7 @@ public class InterestService {
 		interest.increaseSubscriberCount();
 
 		InterestSubscription savedSubscription = interestSubscriptionRepository.save(newSubscription);
+		log.info("관심사 구독 - subscriptionId: {}, interestId: {}", savedSubscription.getId(), interestId);
 
 		return interestMapper.toDto(savedSubscription);
 	}
@@ -214,7 +242,9 @@ public class InterestService {
 	 * 관심사 구독 취소
 	 */
 	@Transactional
-	public void deleteSubscription(UUID interestId, UUID userId){
+	public void deleteSubscription(UUID interestId, UUID userId) {
+		log.debug("관심사 구독 취소 시작 - userId: {}, interestId: {}", userId, interestId);
+
 		User user = userRepository.findById(userId)
 			.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
@@ -227,6 +257,7 @@ public class InterestService {
 		interestSubscriptionRepository.delete(subscription);
 
 		interest.decreaseSubscriberCount();
+		log.info("관심사 구독 취소 - userId: {}, interestId: {}", userId, interestId);
 	}
 
 	/**
