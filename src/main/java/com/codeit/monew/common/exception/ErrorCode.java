@@ -12,6 +12,7 @@ public enum ErrorCode {
 	// User
 	USER_ALREADY_EXIST("이미 존재하는 사용자입니다.", HttpStatus.CONFLICT),
 	USER_NOT_FOUND("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+	LOGIN_FAILED("로그인에 실패했습니다. 이메일 또는 비밀번호를 확인하세요.", HttpStatus.UNAUTHORIZED),
 	USER_ALREADY_DELETED("이미 삭제된 사용자입니다.", HttpStatus.CONFLICT),
 	USER_NOT_SOFT_DELETED("논리 삭제되지 않은 사용자입니다.", HttpStatus.BAD_REQUEST),
 

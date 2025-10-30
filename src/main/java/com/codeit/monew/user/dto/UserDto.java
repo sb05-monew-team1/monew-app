@@ -1,5 +1,6 @@
 package com.codeit.monew.user.dto;
 
+import java.io.Serializable;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -9,5 +10,5 @@ public record UserDto(
 	String email,
 	String nickname,
 	Instant createdAt
-) {
+) implements Serializable { //직렬화 추가(가독성)
 }
