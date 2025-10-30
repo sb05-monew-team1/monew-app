@@ -1,21 +1,16 @@
 package com.codeit.monew.notification.repository;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.*;
 
 import java.time.Instant;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Slice;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.codeit.monew.common.config.QuerydslConfig;
 import com.codeit.monew.notification.dto.NotificationDto;
 
 @ActiveProfiles("test")
@@ -45,7 +40,6 @@ public class NotificationRepositoryTest {
 		assertThat(first.content()).isEqualTo("알림 테스트용 데이터3");
 		assertThat(first.resourceId()).isEqualTo(UUID.fromString("40000000-0000-0000-0000-000000000003"));
 		assertThat(first.resourceType()).isEqualTo("comments");
-
 
 		assertThat(second.content()).isEqualTo("알림 테스트용 데이터2");
 		assertThat(second.resourceId()).isEqualTo(UUID.fromString("40000000-0000-0000-0000-000000000002"));
