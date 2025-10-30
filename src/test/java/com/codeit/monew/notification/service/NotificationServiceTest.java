@@ -11,22 +11,29 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import com.codeit.monew.comment.repository.CommentRepository;
+import com.codeit.monew.comment.service.CommentService;
 import com.codeit.monew.notification.domain.Notification;
 import com.codeit.monew.notification.dto.NotificationCreateRequest;
 import com.codeit.monew.notification.repository.NotificationRepository;
+import com.codeit.monew.user.repository.UserRepository;
 
 @SpringBootTest
 public class NotificationServiceTest {
 	@Autowired
 	private NotificationService notificationService;
 	@Autowired
+	private CommentService commentService;
+	@Autowired
 	private NotificationRepository notificationRepository;
+	@Autowired
+	private UserRepository userRepository;
 
 	@Nested
 	class CreateNotification {
-			@Test
-			@DisplayName("관심사 알림 생성 테스트")
-			public void createInterestNotificationTest () {
+		@Test
+		@DisplayName("관심사 알림 생성 테스트")
+		public void createInterestNotificationTest() {
 			NotificationCreateRequest request = new NotificationCreateRequest(
 				UUID.fromString("11111111-1111-1111-1111-111111111111"),
 				"",
@@ -40,14 +47,20 @@ public class NotificationServiceTest {
 			assert createNoti != null;
 		}
 
-			@Test
-			@DisplayName("댓글 좋아요 알림 생성 테스트")
-			public void createCommentNotificationTest () {
+		@Test
+		@DisplayName("댓글 좋아요 알림 생성 테스트")
+		public void createCommentNotificationTest() {
+			UUID resourceId = UUID.fromString("40000000-0000-0000-0000-000000000001");
+			UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+
+			String nickname = userRepository
+				.findById(UUID.fromString("22222222-2222-2222-2222-222222222222")).get().getNickname();
+			String notificationMsg = nickname + "님이 나의 댓글을 좋아합니다.";
 			NotificationCreateRequest request = new NotificationCreateRequest(
-				UUID.fromString("11111111-1111-1111-1111-111111111111"),
-				"",
-				"comments",
-				UUID.fromString("40000000-0000-0000-0000-000000000001")
+				userId,
+				notificationMsg,
+				"commentLike",
+				resourceId
 			);
 
 			Notification createNoti = notificationService.create(request);
@@ -55,13 +68,22 @@ public class NotificationServiceTest {
 
 			assert createNoti != null;
 		}
+
+		@Test
+		@DisplayName("댓글 좋아요 동작 시 알림 생성 테스트")
+		public void createCommentLikeNotiTest() {
+			UUID commentId = UUID.fromString("20000000-0000-0000-0000-00000000000d");
+			UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+
+			commentService.likeComment(commentId, userId);
+		}
 	}
 
 	@Nested
-	class CheckAllNotifications{
-			@Test
-			@DisplayName("모든 알림 확인 테스트 - 성공")
-			public void checkNotifisSuccessTest () {
+	class CheckAllNotifications {
+		@Test
+		@DisplayName("모든 알림 확인 테스트 - 성공")
+		public void checkNotifisSuccessTest() {
 			String userIdStr = "11111111-1111-1111-1111-111111111111";
 			notificationService.checkAllNotifications(userIdStr);
 
@@ -74,7 +96,7 @@ public class NotificationServiceTest {
 
 		@Test
 		@DisplayName("모든 알림 확인 테스트 - 실패(해당 유저가 존재하지 않음)")
-		public void checkNotifisFailTest () {
+		public void checkNotifisFailTest() {
 			String userIdStr = "11111111-1111-1111-1111-111111111113";
 
 			assertThrows(RuntimeException.class, () -> {
@@ -95,8 +117,9 @@ public class NotificationServiceTest {
 			UUID notificationId = UUID.fromString(notificationIdStr);
 			UUID userId = UUID.fromString(userIdStr);
 
-			Notification notification = notificationRepository.findByIdAndUserIdAndConfirmedTrue(notificationId, userId);
-			System.out.println("알림 : " +  notification.toString());
+			Notification notification = notificationRepository.findByIdAndUserIdAndConfirmedTrue(notificationId,
+				userId);
+			System.out.println("알림 : " + notification.toString());
 
 			assertTrue(notification.isConfirmed() == true);
 		}
