@@ -9,5 +9,6 @@ import com.codeit.monew.comment.domain.Comment;
 /**
  * 댓글 Repository
  */
-public interface CommentRepository extends JpaRepository<Comment, UUID> {
+public interface CommentRepository extends JpaRepository<Comment, UUID>, CommentQueryRepository {
+
 }

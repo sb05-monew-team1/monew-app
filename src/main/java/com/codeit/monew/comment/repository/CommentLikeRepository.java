@@ -9,7 +9,7 @@ import com.codeit.monew.comment.domain.Comment;
 import com.codeit.monew.comment.domain.CommentLike;
 import com.codeit.monew.user.domain.User;
 
-public interface CommentLikeRepository extends JpaRepository<CommentLike, UUID> {
+public interface CommentLikeRepository extends JpaRepository<CommentLike, UUID>, CommentLikeQueryRepository {
 
 	/**
 	 * 특정 댓글에 대한 특정 사용자의 좋아요 조회

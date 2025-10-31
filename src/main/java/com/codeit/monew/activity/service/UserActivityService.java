@@ -1,25 +1,24 @@
 package com.codeit.monew.activity.service;
 
-import java.time.Instant;
-import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.codeit.monew.activity.domain.UserActivity;
 import com.codeit.monew.activity.dto.UserActivityDto;
 import com.codeit.monew.activity.mapper.UserActivityMapper;
 import com.codeit.monew.activity.repository.UserActivityRepository;
 import com.codeit.monew.article.dto.ArticleViewDto;
+import com.codeit.monew.article.repository.ArticleViewRepository;
 import com.codeit.monew.comment.dto.CommentActivityDto;
 import com.codeit.monew.comment.dto.CommentLikeActivityDto;
+import com.codeit.monew.comment.repository.CommentLikeRepository;
+import com.codeit.monew.comment.repository.CommentRepository;
 import com.codeit.monew.interest.dto.SubscriptionDto;
+import com.codeit.monew.interest.repository.InterestSubscriptionRepository;
 import com.codeit.monew.user.domain.User;
+import com.codeit.monew.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -27,54 +26,50 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class UserActivityService {
 
-	private final MongoTemplate mongoTemplate;
+	private final UserRepository userRepository;
 	private final UserActivityRepository userActivityRepository;
-	private final UserActivityMapper  userActivityMapper;
+	private final UserActivityMapper userActivityMapper;
+	private final InterestSubscriptionRepository interestSubsRepository;
+	private final CommentRepository commentRepository;
+	private final CommentLikeRepository commentLikeRepository;
+	private final ArticleViewRepository articleViewRepository;
 
 	public UserActivityDto getUserActivityInfo(UUID userId) {
-		UserActivity userActivity = userActivityRepository.getUserActivity(userId);
+		if (userActivityRepository.existsById(userId)) {
+			UserActivity userActivity = userActivityRepository.getUserActivity(userId);
+			return userActivityMapper.toUserActivityDto(userActivity);
+		}
+
+		UserActivity userActivity = createUserActivity(userId);
+		userActivityRepository.save(userActivity);
 
 		return userActivityMapper.toUserActivityDto(userActivity);
 	}
 
-	@Transactional
-	public void createUserActivity(User user) {
-		userActivityRepository.createUserActivity(user);
+	public void deleteUserActivity(UUID userId) {
+		if (userActivityRepository.existsById(userId)) {
+			userActivityRepository.deleteById(userId);
+		}
 	}
 
-	@Transactional
-	public void addSubscription(UUID userId, SubscriptionDto subscription) {
-		userActivityRepository.addSubscription(userId, subscription);
-	}
+	private UserActivity createUserActivity(UUID userId) {
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new RuntimeException("User not found"));
 
-	@Transactional
-	public void removeSubscription(UUID userId, UUID interestId) {
-		userActivityRepository.removeSubscription(userId, interestId);
-	}
-
-	@Transactional
-	public void addComment(UUID userId, CommentActivityDto comment){
-		userActivityRepository.addComment(userId, comment);
-	}
-
-	@Transactional
-	public void removeComment(UUID userId, UUID commentId) {
-		userActivityRepository.removeComment(userId, commentId);
-	}
-
-	@Transactional
-	public void addCommentLike(UUID userId, CommentLikeActivityDto commentLike) {
-		userActivityRepository.addCommentLike(userId, commentLike);
-	}
-
-	@Transactional
-	public void removeCommentLike(UUID userId, UUID commentLikeId) {
-		userActivityRepository.removeCommentLike(userId, commentLikeId);
-	}
-
-	@Transactional
-	public void addArticleView(UUID userId, ArticleViewDto articleView) {
-		userActivityRepository.addArticleView(userId, articleView);
+		List<SubscriptionDto> subscriptions = interestSubsRepository.searchSubsCription(userId);
+		List<CommentActivityDto> comments = commentRepository.searchRecentComments(userId);
+		List<CommentLikeActivityDto> commentLikes = commentLikeRepository.searchRecentCommentLikes(userId);
+		List<ArticleViewDto> articleViews = articleViewRepository.searchRecentArticleViews(userId);
+		return UserActivity
+			.builder()
+			.id(userId)
+			.email(user.getEmail())
+			.nickname(user.getNickname())
+			.subscriptions(subscriptions)
+			.comments(comments)
+			.commentLikes(commentLikes)
+			.articleViews(articleViews)
+			.build();
 	}
 
 }
