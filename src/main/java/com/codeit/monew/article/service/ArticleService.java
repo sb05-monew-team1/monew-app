@@ -26,6 +26,8 @@ import com.codeit.monew.article.dto.ArticleBackupDto;
 import com.codeit.monew.article.dto.ArticleDto;
 import com.codeit.monew.article.dto.ArticleRestoreResultDto;
 import com.codeit.monew.article.dto.ArticleSearchRequest;
+import com.codeit.monew.article.dto.ArticleSearchRequestFromService;
+import com.codeit.monew.article.dto.ArticleSearchResultDto;
 import com.codeit.monew.article.dto.ArticleViewDto;
 import com.codeit.monew.article.exception.ArticleNotFoundException;
 import com.codeit.monew.article.exception.ArticleViewAlreadyExistException;
@@ -65,19 +67,27 @@ public class ArticleService {
 	public CursorPageResponse<ArticleDto> search(ArticleSearchRequest request) {
 		validateUser(request.monewRequestUserId());
 
-		Slice<ArticleDto> slice = articleRepository.search(request);
+		ArticleSearchRequestFromService serviceRequest = ArticleSearchRequestFromService.from(request);
+
+		ArticleSearchResultDto search = articleRepository.search(serviceRequest);
+		Slice<ArticleDto> slice = search.slice();
 		String nextCursor = null;
-		String nextAfter = null;
+		Instant nextAfter = null;
 
 		if (slice.hasNext() && slice.getNumberOfElements() > 0) {
 			ArticleDto last = slice.getContent().get(slice.getNumberOfElements() - 1);
 
-			nextAfter = last.publishDate().toString();
-			nextCursor = switch (request.orderBy()) {
+			nextAfter = search.createdAt();
+			String baseCursor = switch (request.orderBy()) {
 				case "commentCount" -> String.valueOf(last.commentCount());
 				case "viewCount" -> String.valueOf(last.viewCount());
-				default -> nextAfter;
+				default -> String.valueOf(last.publishDate());
 			};
+			if (nextAfter != null) {
+				nextCursor = baseCursor + "|" + nextAfter;
+			} else {
+				nextCursor = baseCursor;
+			}
 		}
 
 		long totalElements = articleRepository.count();

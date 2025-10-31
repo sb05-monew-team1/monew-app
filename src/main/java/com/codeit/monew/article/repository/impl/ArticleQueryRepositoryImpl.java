@@ -2,22 +2,23 @@ package com.codeit.monew.article.repository.impl;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import org.springframework.stereotype.Repository;
 
 import com.codeit.monew.article.domain.QArticle;
 import com.codeit.monew.article.domain.QArticleView;
 import com.codeit.monew.article.dto.ArticleDto;
-import com.codeit.monew.article.dto.ArticleSearchRequest;
+import com.codeit.monew.article.dto.ArticleSearchRequestFromService;
+import com.codeit.monew.article.dto.ArticleSearchResultDto;
 import com.codeit.monew.article.repository.ArticleQueryRepository;
 import com.codeit.monew.comment.domain.QComment;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
-import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.JPAExpressions;
@@ -35,7 +36,7 @@ public class ArticleQueryRepositoryImpl implements ArticleQueryRepository {
 	private static final QArticleView articleView = QArticleView.articleView;
 
 	@Override
-	public Slice<ArticleDto> search(ArticleSearchRequest req) {
+	public ArticleSearchResultDto search(ArticleSearchRequestFromService req) {
 
 		BooleanBuilder builder = new BooleanBuilder();
 		builder.and(a.deletedAt.isNull());
@@ -81,8 +82,8 @@ public class ArticleQueryRepositoryImpl implements ArticleQueryRepository {
 						? commentCountExpr.lt(cursor)
 						: commentCountExpr.gt(cursor);
 					BooleanExpression tieBreak = order == Order.DESC
-						? commentCountExpr.eq(cursor).and(a.publishDate.lt(after))
-						: commentCountExpr.eq(cursor).and(a.publishDate.gt(after));
+						? commentCountExpr.eq(cursor).and(a.createdAt.lt(after))
+						: commentCountExpr.eq(cursor).and(a.createdAt.gt(after));
 					having.and(countPart.or(tieBreak));
 				}
 				case "viewCount" -> {
@@ -91,8 +92,8 @@ public class ArticleQueryRepositoryImpl implements ArticleQueryRepository {
 						? viewCountExpr.lt(cursor)
 						: viewCountExpr.gt(cursor);
 					BooleanExpression tieBreak = order == Order.DESC
-						? viewCountExpr.eq(cursor).and(a.publishDate.lt(after))
-						: viewCountExpr.eq(cursor).and(a.publishDate.gt(after));
+						? viewCountExpr.eq(cursor).and(a.createdAt.lt(after))
+						: viewCountExpr.eq(cursor).and(a.createdAt.gt(after));
 					having.and(viewPart.or(tieBreak));
 				}
 				case "publishDate" -> {
@@ -100,7 +101,10 @@ public class ArticleQueryRepositoryImpl implements ArticleQueryRepository {
 					BooleanExpression datePart = order == Order.DESC
 						? a.publishDate.lt(cursor)
 						: a.publishDate.gt(cursor);
-					builder.and(datePart);
+					BooleanExpression tieBreak = order == Order.DESC
+						? a.publishDate.eq(cursor).and(a.createdAt.lt(after))
+						: a.publishDate.eq(cursor).and(a.createdAt.gt(after));
+					builder.and(datePart.or(tieBreak));
 				}
 			}
 		}
@@ -115,9 +119,8 @@ public class ArticleQueryRepositoryImpl implements ArticleQueryRepository {
 
 		int limit = req.limit();
 
-		List<ArticleDto> rowsPlusOne = queryFactory
-			.select(Projections.constructor(
-				ArticleDto.class,
+		List<Tuple> rowsPlusOne = queryFactory
+			.select(
 				a.id,
 				a.source,
 				a.sourceUrl,
@@ -126,24 +129,48 @@ public class ArticleQueryRepositoryImpl implements ArticleQueryRepository {
 				a.summary,
 				commentCountExpr,
 				viewCountExpr,
-				viewedByMeExpr
-			))
+				viewedByMeExpr,
+				a.createdAt
+			)
 			.from(a)
 			.distinct()
 			.leftJoin(a.comments, c)
 			.leftJoin(a.articleViews, articleView)
 			.where(builder)
-			.groupBy(a.id, a.source, a.sourceUrl, a.title, a.publishDate, a.summary)
+			.groupBy(a.id, a.source, a.sourceUrl, a.title, a.publishDate, a.summary, a.createdAt)
 			.having(having)
 			.orderBy(orderBy, publishDateOrder)
 			.limit(limit + 1L)
 			.fetch();
 
 		boolean hasNext = rowsPlusOne.size() > limit;
-		List<ArticleDto> content = hasNext ? rowsPlusOne.subList(0, limit) : rowsPlusOne;
+		List<Tuple> contentTuples = hasNext ? rowsPlusOne.subList(0, limit) : rowsPlusOne;
+
+		List<ArticleDto> content = contentTuples.stream()
+			.map(tuple -> {
+				Long commentCount = Objects.requireNonNullElse(tuple.get(commentCountExpr), 0L);
+				Long viewCount = Objects.requireNonNullElse(tuple.get(viewCountExpr), 0L);
+
+				return new ArticleDto(
+					tuple.get(a.id),
+					tuple.get(a.source),
+					tuple.get(a.sourceUrl),
+					tuple.get(a.title),
+					tuple.get(a.publishDate),
+					tuple.get(a.summary),
+					commentCount,
+					viewCount,
+					Boolean.TRUE.equals(tuple.get(viewedByMeExpr))
+				);
+			})
+			.collect(java.util.stream.Collectors.toList());
+
+		Instant lastCreatedAt = contentTuples.isEmpty()
+			? null
+			: contentTuples.get(contentTuples.size() - 1).get(a.createdAt);
 
 		Pageable pageable = Pageable.ofSize(limit);
-		return new SliceImpl<>(content, pageable, hasNext);
+		return new ArticleSearchResultDto(new SliceImpl<>(content, pageable, hasNext), lastCreatedAt);
 	}
 
 }
