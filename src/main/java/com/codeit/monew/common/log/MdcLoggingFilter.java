@@ -1,4 +1,4 @@
-package com.codeit.monew.common.util;
+package com.codeit.monew.common.log;
 
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
