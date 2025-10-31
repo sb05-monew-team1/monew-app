@@ -5,6 +5,8 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,14 +16,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 import com.codeit.monew.comment.dto.CommentDto;
 import com.codeit.monew.comment.dto.CommentLikeRequest;
 import com.codeit.monew.comment.dto.CommentRegisterRequest;
+import com.codeit.monew.comment.dto.CommentSearchRequest;
 import com.codeit.monew.comment.dto.CommentUpdateRequest;
 import com.codeit.monew.comment.service.CommentService;
+import com.codeit.monew.common.dto.CursorPageResponse;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 댓글 Controller
@@ -114,5 +119,22 @@ public class CommentController {
 	) {
 		log.info("댓글 좋아요 취소 API 호출 - commentId: {}, userId: {}", commentId, request.userId());
 		commentService.unlikeComment(commentId, request.userId());
+	}
+
+	/**
+	 * 특정 기사의 댓글 목록 조회 (정렬 및 커서 페이지네이션)
+	 * @param request 댓글 목록 조회 요청
+	 * @param userId 요청자 ID (필수, 헤더)
+	 * @return 댓글 목록 (커서 페이지네이션 응답)
+	 */
+	@GetMapping
+	public CursorPageResponse<CommentDto> getComments(
+		@ModelAttribute @Valid CommentSearchRequest request,
+		@RequestHeader("Monew-Request-User-ID") UUID userId
+	) {
+		log.info("댓글 목록 조회 API 호출 - articleId: {}, orderBy: {}, direction: {}, cursor: {}, limit: {}",
+			request.articleId(), request.orderBy(), request.direction(), request.cursor(), request.limit());
+		CommentSearchRequest filtered = CommentSearchRequest.filter(request, userId);
+		return commentService.getComments(filtered);
 	}
 }
