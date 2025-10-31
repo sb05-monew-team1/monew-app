@@ -22,16 +22,16 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "articles")
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-@Builder
+@SuperBuilder
 @Getter
 public class Article extends BaseDomain {
 
@@ -48,8 +48,17 @@ public class Article extends BaseDomain {
 	@Column(nullable = false, updatable = false)
 	private Instant publishDate;
 
+	@Column(nullable = false, updatable = false)
+	private Instant collectedAt;
+
 	@Column(updatable = false, length = 500)
 	private String summary;
+
+	@Column(nullable = false)
+	private long commentCount;
+
+	@Column(nullable = false)
+	private long viewCount;
 
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "article", orphanRemoval = true, cascade = CascadeType.ALL)
 	private List<Comment> comments;
