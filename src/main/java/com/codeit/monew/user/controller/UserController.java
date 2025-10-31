@@ -91,8 +91,8 @@ public class UserController {
   ) {
     UserDto userDto = userService.loginUser(userLoginRequest);
     //세션에 저장할 키 이름
-    final String USER_SESSION_KEY = "loggedInUser";
-    session.setAttribute(USER_SESSION_KEY, userDto);
+    final String USER_SESSION_KEY = "loggedInUserId";
+    session.setAttribute(USER_SESSION_KEY, userDto.id());
     //세션 타임아웃 설정(필요시)
     //session.setMaxInactiveInterval(7200); //1시간 30분
     return ResponseEntity.ok(userDto);
