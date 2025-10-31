@@ -38,7 +38,7 @@ public class ArticleQueryRepositoryImpl implements ArticleQueryRepository {
 	public Slice<ArticleDto> search(ArticleSearchRequest req) {
 
 		BooleanBuilder builder = new BooleanBuilder();
-		builder.and(a.deleted_at.isNull());
+		builder.and(a.deletedAt.isNull());
 
 		if (req.keyword() != null && !req.keyword().isBlank()) {
 			builder.and(a.title.containsIgnoreCase(req.keyword())
