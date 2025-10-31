@@ -10,7 +10,7 @@ public record CommentActivityDto(
 	UUID userId,
 	String userNickname,
 	String content,
-	int likeCount,
+	long likeCount,
 	Instant createdAt
 ) {
 }

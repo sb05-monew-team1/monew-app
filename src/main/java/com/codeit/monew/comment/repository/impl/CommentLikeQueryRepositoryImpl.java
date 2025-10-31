@@ -12,6 +12,7 @@ import com.codeit.monew.comment.domain.QCommentLike;
 import com.codeit.monew.comment.dto.CommentLikeActivityDto;
 import com.codeit.monew.comment.dto.CommentLikeDto;
 import com.codeit.monew.comment.repository.CommentLikeQueryRepository;
+import com.codeit.monew.user.domain.QUser;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 
@@ -25,6 +26,7 @@ public class CommentLikeQueryRepositoryImpl implements CommentLikeQueryRepositor
 	private static final QCommentLike cl = QCommentLike.commentLike;
 	private static final QComment c = QComment.comment;
 	private static final QArticle a = QArticle.article;
+	private static final QUser u = QUser.user;
 
 	@Override
 	public List<CommentLikeActivityDto> searchRecentCommentLikes(UUID userId) {
@@ -46,6 +48,7 @@ public class CommentLikeQueryRepositoryImpl implements CommentLikeQueryRepositor
 			.from(cl)
 			.join(cl.comment, c)
 			.leftJoin(c.article, a)
+			.leftJoin(c.user, u)
 			.where(cl.user.id.eq(userId))
 			.orderBy(cl.createdAt.desc())
 			.limit(10)

@@ -36,23 +36,22 @@ public class ArticleViewQueryRepositoryImpl implements ArticleViewQueryRepositor
 				Projections.constructor(
 					ArticleViewDto.class,
 					av.id,
-					u.id,
+					av.user.id,
 					av.createdAt,
 					a.id,
-					a.source,
+					a.source.stringValue(),
 					a.sourceUrl,
 					a.title,
 					a.publishDate,
 					a.summary,
-					c.id.countDistinct(),
-					av.id.countDistinct()
+					c.id.countDistinct().longValue(),
+					av.id.countDistinct().longValue()
 				))
-			.from(av)
-			.join(av.article, a)
+			.from(a)
+			.leftJoin(a.articleViews, av)
 			.leftJoin(a.comments, c)
-			.leftJoin(c.user, u)
-			.where(u.id.eq(userId))
-			.groupBy(u.id, av.createdAt, a.id, a.source, a.sourceUrl, a.title, a.publishDate, a.summary)
+			.where(av.user.id.eq(userId))
+			.groupBy(a.id)
 			.orderBy(av.createdAt.desc())
 			.limit(10)
 			.fetch();

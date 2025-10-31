@@ -36,7 +36,8 @@ public class UserActivityService {
 
 	public UserActivityDto getUserActivityInfo(UUID userId) {
 		if (userActivityRepository.existsById(userId)) {
-			UserActivity userActivity = userActivityRepository.getUserActivity(userId);
+			UserActivity userActivity = userActivityRepository.findById(userId)
+				.orElseThrow(() -> new RuntimeException("userActivity not found"));
 			return userActivityMapper.toUserActivityDto(userActivity);
 		}
 
