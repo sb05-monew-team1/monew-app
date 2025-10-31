@@ -1,7 +1,6 @@
 package com.codeit.monew.article.repository.impl;
 
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Objects;
 
@@ -9,7 +8,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.SliceImpl;
 import org.springframework.stereotype.Repository;
 
-import com.codeit.monew.article.domain.ArticleSource;
 import com.codeit.monew.article.domain.QArticle;
 import com.codeit.monew.article.domain.QArticleView;
 import com.codeit.monew.article.dto.ArticleDto;
