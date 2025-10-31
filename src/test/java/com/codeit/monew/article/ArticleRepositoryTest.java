@@ -14,6 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.codeit.monew.article.dto.ArticleDto;
 import com.codeit.monew.article.dto.ArticleSearchRequest;
+import com.codeit.monew.article.dto.ArticleSearchRequestFromService;
 import com.codeit.monew.article.repository.ArticleRepository;
 import com.codeit.monew.common.config.QuerydslConfig;
 import com.querydsl.core.types.Order;
@@ -44,7 +45,7 @@ public class ArticleRepositoryTest {
 			USER_1
 		);
 
-		Slice<ArticleDto> slice = articleRepository.search(request);
+		Slice<ArticleDto> slice = articleRepository.search(ArticleSearchRequestFromService.from(request)).slice();
 
 		assertThat(slice.hasNext()).isTrue();
 		assertThat(slice.getContent()).hasSize(5);
@@ -86,7 +87,8 @@ public class ArticleRepositoryTest {
 			USER_1
 		);
 
-		Slice<ArticleDto> firstPage = articleRepository.search(firstPageRequest);
+		Slice<ArticleDto> firstPage = articleRepository.search(ArticleSearchRequestFromService.from(firstPageRequest))
+			.slice();
 
 		assertThat(firstPage.hasNext()).isTrue();
 		assertThat(firstPage.getContent())
@@ -118,7 +120,8 @@ public class ArticleRepositoryTest {
 			USER_1
 		);
 
-		Slice<ArticleDto> secondPage = articleRepository.search(secondPageRequest);
+		Slice<ArticleDto> secondPage = articleRepository.search(ArticleSearchRequestFromService.from(secondPageRequest))
+			.slice();
 
 		assertThat(secondPage.hasNext()).isTrue();
 		assertThat(secondPage.getContent())

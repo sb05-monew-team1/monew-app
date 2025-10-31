@@ -64,17 +64,7 @@ public class ArticleServiceTest {
 				10L,
 				true
 			);
-			Article article = new Article(
-				ArticleSource.NAVER,
-				"url",
-				"title",
-				date,
-				"summary",
-				List.of(),
-				List.of(),
-				List.of(),
-				null
-			);
+			Article article = new Article();
 
 			given(articleRepository.findById(any())).willReturn(Optional.of(article));
 			given(userRepository.findById(any())).willReturn(Optional.ofNullable(User.builder().build()));
