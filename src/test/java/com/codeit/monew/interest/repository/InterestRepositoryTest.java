@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
 
 import com.codeit.monew.common.config.QuerydslConfig;
 import com.codeit.monew.interest.domain.Interest;
@@ -22,6 +23,7 @@ import com.querydsl.core.BooleanBuilder;
 
 @DataJpaTest
 @Import(QuerydslConfig.class)
+@ActiveProfiles("test")
 class InterestRepositoryTest {
 
 	@Autowired
