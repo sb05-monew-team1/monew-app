@@ -1,5 +1,6 @@
 package com.codeit.monew.article.controller;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -12,9 +13,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.codeit.monew.article.dto.ArticleDto;
+import com.codeit.monew.article.dto.ArticleRestoreResultDto;
 import com.codeit.monew.article.dto.ArticleSearchRequest;
 import com.codeit.monew.article.dto.ArticleViewDto;
 import com.codeit.monew.article.service.ArticleService;
@@ -76,5 +79,13 @@ public class ArticleController {
 	) {
 		articleService.deleteHard(articleId);
 		return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+	}
+
+	@GetMapping("/restore")
+	public ResponseEntity<ArticleRestoreResultDto> restore(
+		@RequestParam(name = "from") LocalDateTime from,
+		@RequestParam(name = "to") LocalDateTime to
+	) {
+		return ResponseEntity.ok(articleService.restore(from, to));
 	}
 }
