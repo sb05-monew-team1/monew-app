@@ -3,11 +3,13 @@ package com.codeit.monew.article.domain;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import com.codeit.monew.comment.domain.Comment;
-import com.codeit.monew.common.base.BaseDomain;
 import com.codeit.monew.interest.domain.Interest;
 
 import jakarta.persistence.CascadeType;
@@ -17,9 +19,11 @@ import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -33,7 +37,16 @@ import lombok.experimental.SuperBuilder;
 @EntityListeners(AuditingEntityListener.class)
 @SuperBuilder
 @Getter
-public class Article extends BaseDomain {
+public class Article {
+
+	@Id
+	private UUID id;
+
+	@CreatedDate
+	private Instant createdAt;
+
+	@LastModifiedDate
+	private Instant updatedAt;
 
 	@Column(nullable = false, updatable = false, length = 20)
 	@Enumerated(EnumType.STRING)
@@ -74,11 +87,18 @@ public class Article extends BaseDomain {
 	)
 	private List<Interest> interests = new ArrayList<>();
 
-	private Instant deleted_at;
+	private Instant deletedAt;
 
 	public void deleteSoft(Instant deletedAt) {
 		if (deletedAt != null) {
-			this.deleted_at = deletedAt;
+			this.deletedAt = deletedAt;
+		}
+	}
+
+	@PrePersist
+	private void ensureIdNotNull() {
+		if (this.id == null) {
+			this.id = UUID.randomUUID();
 		}
 	}
 }

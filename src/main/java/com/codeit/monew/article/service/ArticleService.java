@@ -153,7 +153,7 @@ public class ArticleService {
 			if (stream == null) {
 				continue;
 			}
-			List<Article> articles = null;
+			List<Article> articles;
 			try {
 				articles = readBackup(stream, sourceUrls);
 			} catch (IOException e) {
@@ -173,7 +173,7 @@ public class ArticleService {
 	private Article validateArticle(UUID articleId) {
 		Article article = articleRepository.findById(articleId)
 			.orElseThrow(() -> new ArticleNotFoundException().addDetail("articleId", articleId));
-		if (article.getDeleted_at() != null) {
+		if (article.getDeletedAt() != null) {
 			throw new ArticleNotFoundException().addDetail("articleId", articleId);
 		}
 
@@ -208,9 +208,8 @@ public class ArticleService {
 					.summary(backup.summary())
 					.commentCount(backup.commentCount())
 					.viewCount(backup.viewCount())
-					.deleted_at(backup.deletedAt())
+					.deletedAt(backup.deletedAt())
 					.build();
-				article.markAsNew();
 				restored.add(article);
 				urls.add(backup.sourceUrl());
 			}
