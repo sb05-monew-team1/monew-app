@@ -1,5 +1,6 @@
 package com.codeit.monew.activity.service;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -66,6 +67,7 @@ public class UserActivityService {
 			.id(userId)
 			.email(user.getEmail())
 			.nickname(user.getNickname())
+			.createdAt(Instant.now())
 			.subscriptions(subscriptions)
 			.comments(comments)
 			.commentLikes(commentLikes)
