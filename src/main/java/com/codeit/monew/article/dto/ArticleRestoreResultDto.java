@@ -1,11 +1,14 @@
 package com.codeit.monew.article.dto;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import lombok.Builder;
+
+@Builder
 public record ArticleRestoreResultDto(
-	Instant restoreDate,
+	LocalDateTime restoreDate,
 	List<UUID> restoredArticleIds,
 	long restoredArticleCount
 ) {

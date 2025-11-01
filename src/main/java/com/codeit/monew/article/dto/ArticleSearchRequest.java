@@ -3,11 +3,11 @@ package com.codeit.monew.article.dto;
 import static com.codeit.monew.common.util.SearchRequestNormalizer.*;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import com.codeit.monew.article.domain.ArticleSource;
 import com.querydsl.core.types.Order;
 
 import jakarta.validation.constraints.NotBlank;
@@ -16,9 +16,9 @@ import jakarta.validation.constraints.NotNull;
 public record ArticleSearchRequest(
 	String keyword,
 	UUID interestId,
-	List<ArticleSource> sourceIn,
-	Instant publishDateFrom,
-	Instant publishDateTo,
+	List<String> sourceIn,
+	LocalDateTime publishDateFrom,
+	LocalDateTime publishDateTo,
 
 	@NotBlank(message = "정렬 기준을 입력 해 주세요.")
 	String orderBy,
@@ -40,6 +40,17 @@ public record ArticleSearchRequest(
 		Set<String> allowed = Set.of("publishDate", "commentCount", "viewCount");
 		String orderBy = normalizeOrderBy(r.orderBy, allowed, "publishDate");
 
+		String cursor = r.cursor;
+		Instant after = r.after;
+
+		if (after == null && cursor != null && cursor.contains("|")) {
+			String[] parts = cursor.split("\\|", 2);
+			cursor = parts[0];
+			if (parts.length > 1 && !parts[1].isBlank()) {
+				after = Instant.parse(parts[1]);
+			}
+		}
+
 		return new ArticleSearchRequest(
 			r.keyword,
 			r.interestId,
@@ -48,8 +59,8 @@ public record ArticleSearchRequest(
 			r.publishDateTo,
 			orderBy,
 			r.direction,
-			r.cursor,
-			r.after,
+			cursor,
+			after,
 			limit,
 			monewRequestUserId
 		);

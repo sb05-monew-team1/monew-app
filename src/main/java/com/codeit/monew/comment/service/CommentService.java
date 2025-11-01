@@ -1,7 +1,12 @@
 package com.codeit.monew.comment.service;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,16 +16,20 @@ import com.codeit.monew.comment.domain.Comment;
 import com.codeit.monew.comment.domain.CommentLike;
 import com.codeit.monew.comment.dto.CommentDto;
 import com.codeit.monew.comment.dto.CommentRegisterRequest;
+import com.codeit.monew.comment.dto.CommentSearchRequest;
 import com.codeit.monew.comment.dto.CommentUpdateRequest;
 import com.codeit.monew.comment.mapper.CommentMapper;
 import com.codeit.monew.comment.repository.CommentLikeRepository;
 import com.codeit.monew.comment.repository.CommentRepository;
+import com.codeit.monew.common.dto.CursorPageResponse;
 import com.codeit.monew.common.exception.BusinessException;
 import com.codeit.monew.common.exception.ErrorCode;
+import com.codeit.monew.common.util.PageResponseMapper;
 import com.codeit.monew.notification.dto.NotificationCreateRequest;
 import com.codeit.monew.notification.service.NotificationService;
 import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.repository.UserRepository;
+import com.querydsl.core.types.Order;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +49,7 @@ public class CommentService {
 	private final ArticleRepository articleRepository;
 	private final CommentMapper commentMapper;
 	private final NotificationService notificationService;
+	private final PageResponseMapper pageResponseMapper;
 
 	/**
 	 * 댓글 등록
@@ -236,5 +246,99 @@ public class CommentService {
 		comment.decreaseLikeCount();
 
 		log.info("댓글 좋아요 취소 완료 - commentId: {}, userId: {}", commentId, userId);
+	}
+
+	/**
+	 * 특정 기사의 댓글 목록 조회 (정렬 및 커서 페이지네이션)
+	 * @param request 댓글 목록 조회 요청
+	 * @return 댓글 목록 (커서 페이지네이션 응답)
+	 */
+	public CursorPageResponse<CommentDto> getComments(CommentSearchRequest request) {
+		log.info("댓글 목록 조회 시작 - articleId: {}, orderBy: {}, direction: {}, cursor: {}, limit: {}",
+			request.articleId(), request.orderBy(), request.direction(), request.cursor(), request.limit());
+
+		// 기사 존재 확인
+		Article article = articleRepository.findById(request.articleId())
+			.orElseThrow(() -> new BusinessException(ErrorCode.ARTICLE_NOT_FOUND)
+				.addDetail("articleId", request.articleId()));
+
+		// 페이징 설정 (limit+1 조회로 hasNext 판단)
+		Pageable pageable = PageRequest.of(0, request.limit() + 1);
+
+		// 댓글 목록 조회 (정렬 조건 및 방향에 따라)
+		Slice<Comment> commentSlice;
+		boolean isDesc = request.direction() == Order.DESC;
+
+		if (request.orderBy().equals("likeCount")) {
+			// 좋아요순 조회
+			Long likeCursor = null;
+			Instant dateCursor = null;
+			if (request.cursor() != null && !request.cursor().isEmpty()) {
+				String[] parts = request.cursor().split("_");
+				likeCursor = Long.parseLong(parts[0]);
+				dateCursor = Instant.parse(parts[1]);
+			}
+
+			if (isDesc) {
+				commentSlice = commentRepository.findByArticleAndNotDeletedOrderByLikesDesc(
+					article, likeCursor, dateCursor, pageable
+				);
+			} else {
+				commentSlice = commentRepository.findByArticleAndNotDeletedOrderByLikesAsc(
+					article, likeCursor, dateCursor, pageable
+				);
+			}
+		} else {
+			// 날짜순 조회 (기본값)
+			Instant dateCursor = (request.cursor() != null && !request.cursor().isEmpty())
+				? Instant.parse(request.cursor()) : null;
+
+			if (isDesc) {
+				commentSlice = commentRepository.findByArticleAndNotDeletedOrderByDateDesc(
+					article, dateCursor, pageable
+				);
+			} else {
+				commentSlice = commentRepository.findByArticleAndNotDeletedOrderByDateAsc(
+					article, dateCursor, pageable
+				);
+			}
+		}
+
+		// 사용자 조회
+		User requestUser = userRepository.findById(request.monewRequestUserId())
+			.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND)
+				.addDetail("userId", request.monewRequestUserId()));
+
+		// DTO 변환
+		Slice<CommentDto> commentDtoSlice = commentSlice.map(comment -> {
+			// 좋아요 여부 확인
+			boolean likedByMe = commentLikeRepository.existsByCommentAndUser(comment, requestUser);
+
+			// DTO 변환
+			return commentMapper.toDto(comment, comment.getUser().getNickname(), likedByMe);
+		});
+
+		// 다음 커서 생성
+		String nextCursor = null;
+		String nextAfter = null;
+
+		if (commentDtoSlice.hasNext() && commentDtoSlice.getNumberOfElements() > 0) {
+			CommentDto lastComment = commentDtoSlice.getContent().get(commentDtoSlice.getNumberOfElements() - 1);
+
+			nextAfter = lastComment.createdAt().toString();
+			if (request.orderBy().equals("likeCount")) {
+				// 좋아요순: likeCount_createdAt 형식
+				nextCursor = lastComment.likeCount() + "_" + lastComment.createdAt().toString();
+			} else {
+				// 날짜순: createdAt만
+				nextCursor = nextAfter;
+			}
+		}
+
+		log.info("댓글 목록 조회 완료 - articleId: {}, 조회된 댓글 수: {}",
+			request.articleId(), commentDtoSlice.getNumberOfElements());
+
+		// CursorPageResponse 생성 (totalElements는 -1로 설정, 커서 페이지네이션에서는 전체 개수 불필요)
+		return pageResponseMapper.toCursorPageResponse(commentDtoSlice, nextCursor, nextAfter, -1);
 	}
 }
