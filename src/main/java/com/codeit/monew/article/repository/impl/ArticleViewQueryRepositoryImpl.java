@@ -51,7 +51,7 @@ public class ArticleViewQueryRepositoryImpl implements ArticleViewQueryRepositor
 			.leftJoin(a.articleViews, av)
 			.leftJoin(a.comments, c)
 			.where(av.user.id.eq(userId))
-			.groupBy(a.id)
+			.groupBy(a.id, av.id, av.user.id, av.createdAt)
 			.orderBy(av.createdAt.desc())
 			.limit(10)
 			.fetch();
