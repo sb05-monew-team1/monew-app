@@ -2,6 +2,7 @@ package com.codeit.monew.activity.service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -22,7 +23,9 @@ import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserActivityService {
@@ -55,6 +58,7 @@ public class UserActivityService {
 	}
 
 	private UserActivity createUserActivity(UUID userId) {
+		log.info("Searching user by id: {}", userId);
 		User user = userRepository.findById(userId)
 			.orElseThrow(() -> new RuntimeException("User not found"));
 
