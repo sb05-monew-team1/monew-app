@@ -16,9 +16,11 @@ import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 @Document(collection = "user_activities")
+@ToString
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
