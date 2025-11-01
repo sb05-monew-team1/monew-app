@@ -19,6 +19,7 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.codeit.monew.activity.service.UserActivityService;
 import com.codeit.monew.article.domain.Article;
 import com.codeit.monew.article.domain.ArticleSource;
 import com.codeit.monew.article.domain.ArticleView;
@@ -58,6 +59,7 @@ public class ArticleService {
 	private final UserRepository userRepository;
 	private final ArticleViewRepository articleViewRepository;
 	private final ArticleStorage articleStorage;
+	private final UserActivityService userActivityService;
 	private final ObjectMapper objectMapper;
 
 	private final ArticleMapper articleMapper;
@@ -120,6 +122,8 @@ public class ArticleService {
 			.build();
 		articleViewRepository.save(articleView);
 		ArticleViewDto dto = articleViewMapper.toDto(articleView);
+
+		userActivityService.deleteUserActivity(user.getId());
 
 		return dto;
 	}

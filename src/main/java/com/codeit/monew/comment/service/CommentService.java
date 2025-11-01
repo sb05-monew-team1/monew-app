@@ -10,6 +10,7 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.codeit.monew.activity.service.UserActivityService;
 import com.codeit.monew.article.domain.Article;
 import com.codeit.monew.article.repository.ArticleRepository;
 import com.codeit.monew.comment.domain.Comment;
@@ -50,6 +51,7 @@ public class CommentService {
 	private final CommentMapper commentMapper;
 	private final NotificationService notificationService;
 	private final PageResponseMapper pageResponseMapper;
+	private final UserActivityService userActivityService;
 
 	/**
 	 * 댓글 등록
@@ -81,6 +83,8 @@ public class CommentService {
 
 		// 저장
 		Comment savedComment = commentRepository.save(comment);
+
+		userActivityService.deleteUserActivity(user.getId());
 
 		log.info("댓글 등록 완료 - commentId: {}", savedComment.getId());
 
@@ -118,6 +122,8 @@ public class CommentService {
 
 		log.info("댓글 수정 완료 - commentId: {}", commentId);
 
+		userActivityService.deleteUserActivity(requestUserId);
+
 		// DTO 변환 후 반환
 		return commentMapper.toDto(comment, comment.getUser().getNickname(), false);
 	}
@@ -137,8 +143,9 @@ public class CommentService {
 
 		// 논리 삭제 (deletedAt 필드에 현재 시간 저장)
 		comment.softDelete();
-
 		log.info("댓글 논리 삭제 완료 - commentId: {}", commentId);
+
+		userActivityService.deleteUserActivity(comment.getUser().getId());
 	}
 
 	/**
@@ -208,8 +215,10 @@ public class CommentService {
 				user.getId()
 			);
 
-			System.out.println("댓글 좋아요 알림 생성 : " + notificationService.create(notificationCreateRequest));
-			// notificationService.create(notificationCreateRequest);
+			// System.out.println("댓글 좋아요 알림 생성 : " + notificationService.create(notificationCreateRequest));
+			notificationService.create(notificationCreateRequest);
+
+			userActivityService.deleteUserActivity(user.getId());
 		}
 
 	}
@@ -246,6 +255,8 @@ public class CommentService {
 		comment.decreaseLikeCount();
 
 		log.info("댓글 좋아요 취소 완료 - commentId: {}, userId: {}", commentId, userId);
+
+		userActivityService.deleteUserActivity(user.getId());
 	}
 
 	/**

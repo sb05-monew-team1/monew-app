@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import com.codeit.monew.activity.service.UserActivityService;
 import com.codeit.monew.common.dto.CursorPageResponse;
 import com.codeit.monew.common.exception.BusinessException;
 import com.codeit.monew.common.exception.ErrorCode;
@@ -54,6 +55,7 @@ public class InterestService {
 	private final InterestMapper interestMapper;
 	private final PageResponseMapper pageResponseMapper;
 	private final UserRepository userRepository;
+	private final UserActivityService userActivityService;
 
 	private static final double SIMILARITY_THRESHOLD = 0.8;
 
@@ -235,6 +237,8 @@ public class InterestService {
 		InterestSubscription savedSubscription = interestSubscriptionRepository.save(newSubscription);
 		log.info("관심사 구독 - subscriptionId: {}, interestId: {}", savedSubscription.getId(), interestId);
 
+		userActivityService.deleteUserActivity(user.getId());
+
 		return interestMapper.toDto(savedSubscription);
 	}
 
@@ -258,6 +262,8 @@ public class InterestService {
 
 		interest.decreaseSubscriberCount();
 		log.info("관심사 구독 취소 - userId: {}, interestId: {}", userId, interestId);
+
+		userActivityService.deleteUserActivity(user.getId());
 	}
 
 	/**
