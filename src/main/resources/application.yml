@@ -1,6 +1,11 @@
 spring:
   profiles:
     active: dev # dev | prod
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/monew
+      port: 27017
+      database: monew
 
 management:
   endpoint:
