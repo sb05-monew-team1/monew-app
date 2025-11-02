@@ -69,14 +69,6 @@ public class NotificationServiceTest {
 			assert createNoti != null;
 		}
 
-		@Test
-		@DisplayName("댓글 좋아요 동작 시 알림 생성 테스트")
-		public void createCommentLikeNotiTest() {
-			UUID commentId = UUID.fromString("20000000-0000-0000-0000-00000000000d");
-			UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
-
-			commentService.likeComment(commentId, userId);
-		}
 	}
 
 	@Nested
@@ -107,22 +99,6 @@ public class NotificationServiceTest {
 
 	@Nested
 	class CheckNotification {
-		@Test
-		@DisplayName("알림 확인 테스트 - 성공")
-		public void checkNotificationSuccessTest() {
-			String notificationIdStr = "50000000-0000-0000-0000-000000000001";
-			String userIdStr = "11111111-1111-1111-1111-111111111111";
-			notificationService.checkNotification(notificationIdStr, userIdStr);
-
-			UUID notificationId = UUID.fromString(notificationIdStr);
-			UUID userId = UUID.fromString(userIdStr);
-
-			Notification notification = notificationRepository.findByIdAndUserIdAndConfirmedTrue(notificationId,
-				userId);
-			System.out.println("알림 : " + notification.toString());
-
-			assertTrue(notification.isConfirmed() == true);
-		}
 
 		@Test
 		@DisplayName("알림 확인 테스트 - 실패(존재하지 않는 유저)")

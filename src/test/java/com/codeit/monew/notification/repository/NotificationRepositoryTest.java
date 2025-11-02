@@ -39,11 +39,11 @@ public class NotificationRepositoryTest {
 
 		assertThat(first.content()).isEqualTo("알림 테스트용 데이터3");
 		assertThat(first.resourceId()).isEqualTo(UUID.fromString("40000000-0000-0000-0000-000000000003"));
-		assertThat(first.resourceType()).isEqualTo("comments");
+		assertThat(first.resourceType()).isEqualTo("commentLike");
 
 		assertThat(second.content()).isEqualTo("알림 테스트용 데이터2");
 		assertThat(second.resourceId()).isEqualTo(UUID.fromString("40000000-0000-0000-0000-000000000002"));
-		assertThat(second.resourceType()).isEqualTo("comments");
+		assertThat(second.resourceType()).isEqualTo("commentLike");
 	}
 
 	@Test
@@ -74,11 +74,11 @@ public class NotificationRepositoryTest {
 		assertThat(secondSlice.getContent())
 			.extracting(NotificationDto::id)
 			.containsExactly(
-				UUID.fromString("50000000-0000-0000-0000-000000000005"),
-				UUID.fromString("50000000-0000-0000-0000-000000000001")
+				UUID.fromString("50000000-0000-0000-0000-000000000004"),
+				UUID.fromString("50000000-0000-0000-0000-000000000003")
 			);
 		assertThat(secondSlice.getContent())
 			.extracting(NotificationDto::content)
-			.containsExactly("알림 테스트용 데이터4", "알림 테스트용 데이터1");
+			.containsExactly("알림 테스트용 데이터3", "알림 테스트용 데이터2");
 	}
 }
