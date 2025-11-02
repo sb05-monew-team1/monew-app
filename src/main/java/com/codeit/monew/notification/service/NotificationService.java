@@ -101,7 +101,8 @@ public class NotificationService {
 				throw new RuntimeException("Notification not found");
 			}
 
-			Notification notification = notificationRepository.findByIdAndUserIdAndConfirmedFalse(notificationId, userId);
+			Notification notification = notificationRepository.findByIdAndUserIdAndConfirmedFalse(notificationId, userId)
+				.orElseThrow(() -> new RuntimeException("Notification not found"));
 			notification.setConfirmed(true);
 
 			notificationRepository.save(notification);
