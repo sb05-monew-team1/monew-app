@@ -1,11 +1,28 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    driver-class-name: org.postgresql.Driver
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        default_schema: app
+
+  sql:
+    init:
+      mode: never
+
 logging:
   level:
     root: INFO
     com.codeit.monew: INFO
+
 management:
   endpoints:
     web:
       exposure:
-        include: health,info   # prod는 보수적으로
-  server:
-    port: 8080
+        include: health,info

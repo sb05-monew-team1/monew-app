@@ -1,0 +1,109 @@
+# ================================
+# Secrets (보안값, Environment secrets)
+# AWS_ACCOUNT_ID     : AWS 계정 ID(228282822)
+# AWS_ACCESS_KEY     : IAM 사용자의 Access Key ID
+# AWS_SECRET_KEY     : IAM 사용자의 Secret Access Key
+#
+# Vars (일반 변수, Environment variables)
+# AWS_REGION         : 배포할 리전 (예: ap-northeast-2)
+# ECR_REPOSITORY     : 리포지토리 이름
+# ECS_TASK_DEFINITION: 태스크 정의 이름 (예: file-management-task)
+# ECS_CLUSTER        : ECS 클러스터 이름 (예: file-management-cluster)
+# ECS_SERVICE        : ECS 서비스 이름 (예: file-management-service)
+# ================================
+name: 배포
+
+on:
+  push:
+    branches:
+      - release
+  workflow_dispatch:
+
+
+jobs:
+  build-and-push:
+    environment: prod
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      image_tag: ${{ github.sha }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: AWS CLI 설정
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: ECR 로그인
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registry-type: 'public'
+          mask-password: 'true'
+        env:
+          AWS_REGION: ${{ vars.AWS_ECR_REGION }}
+
+      - name: Docker 이미지 빌드 및 푸시
+        run: |
+          ${{ vars.ECR_REPOSITORY_URI }}
+
+          docker buildx build \
+            -t $ECR_URI:${{ github.sha }} \
+            -t $ECR_URI:latest \
+            --push \
+            .
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+
+    steps:
+      - name: AWS CLI 설정
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: ECS 태스크 정의 업데이트
+        run: |
+          ${{ vars.ECR_REPOSITORY_URI }}
+
+          TASK_DEFINITION=$(
+          aws ecs describe-task-definition \
+            --task-definition ${{ vars.ECS_TASK_DEFINITION }}
+          )
+
+          NEW_TASK_DEFINITION=$(
+          echo $TASK_DEFINITION | jq \
+            --arg IMAGE "$ECR_URI:latest" \
+            '.taskDefinition | .containerDefinitions[0].image = $IMAGE | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)'
+          )
+
+          NEW_TASK_DEF_ARN=$(
+            aws ecs register-task-definition \
+              --cli-input-json "$NEW_TASK_DEFINITION" | \
+            jq -r '.taskDefinition.taskDefinitionArn'
+          )
+
+          echo "NEW_TASK_DEF_ARN=$NEW_TASK_DEF_ARN" >> $GITHUB_ENV
+
+      - name: ECS 서비스 중지(프리티어 환경 고려)
+        run: |
+          aws ecs update-service \
+            --cluster ${{ vars.ECS_CLUSTER }} \
+            --service ${{ vars.ECS_SERVICE }} \
+            --desired-count 0
+
+      - name: ECS 서비스 업데이트
+        run: |
+          aws ecs update-service \
+            --cluster ${{ vars.ECS_CLUSTER }} \
+            --service ${{ vars.ECS_SERVICE }} \
+            --task-definition $NEW_TASK_DEF_ARN \
+            --desired-count 1 \
+            --force-new-deployment
