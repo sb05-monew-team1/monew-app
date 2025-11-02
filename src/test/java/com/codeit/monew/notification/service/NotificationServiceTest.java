@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import com.codeit.monew.comment.repository.CommentRepository;
 import com.codeit.monew.comment.service.CommentService;
@@ -19,6 +20,7 @@ import com.codeit.monew.notification.repository.NotificationRepository;
 import com.codeit.monew.user.repository.UserRepository;
 
 @SpringBootTest
+@ActiveProfiles("test")
 public class NotificationServiceTest {
 	@Autowired
 	private NotificationService notificationService;
