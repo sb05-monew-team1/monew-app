@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import com.codeit.monew.activity.domain.UserActivity;
 import com.codeit.monew.activity.dto.UserActivityDto;
+import com.codeit.monew.activity.exception.UserActivityNotFoundException;
 import com.codeit.monew.activity.mapper.UserActivityMapper;
 import com.codeit.monew.activity.repository.UserActivityRepository;
 import com.codeit.monew.article.dto.ArticleViewDto;
@@ -41,7 +42,7 @@ public class UserActivityService {
 	public UserActivityDto getUserActivityInfo(UUID userId) {
 		if (userActivityRepository.existsById(userId)) {
 			UserActivity userActivity = userActivityRepository.findById(userId)
-				.orElseThrow(() -> new RuntimeException("userActivity not found"));
+				.orElseThrow(UserActivityNotFoundException::new);
 			return userActivityMapper.toUserActivityDto(userActivity);
 		}
 
