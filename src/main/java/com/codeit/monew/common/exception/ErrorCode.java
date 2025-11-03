@@ -32,6 +32,9 @@ public enum ErrorCode {
 	COMMENT_LIKE_ALREADY_EXISTS("이미 좋아요를 누른 댓글입니다.", HttpStatus.CONFLICT),
 	COMMENT_LIKE_NOT_FOUND("좋아요를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
 
+	// Notification
+	NOTIFICATION_NOT_FOUND("알림을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+
 	// Common
 	ARTICLE_RESTORE_FAILED("기사 복원에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
 	FORBIDDEN("권한이 없습니다.", HttpStatus.FORBIDDEN),

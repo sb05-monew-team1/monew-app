@@ -8,12 +8,16 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 
 import com.codeit.monew.common.dto.CursorPageResponse;
+import com.codeit.monew.common.exception.BusinessException;
+import com.codeit.monew.common.exception.ErrorCode;
 import com.codeit.monew.common.util.PageResponseMapper;
 import com.codeit.monew.notification.domain.Notification;
 import com.codeit.monew.notification.dto.NotificationCreateRequest;
 import com.codeit.monew.notification.dto.NotificationDto;
+import com.codeit.monew.notification.exception.NotificationNotFoundException;
 import com.codeit.monew.notification.repository.NotificationRepository;
 import com.codeit.monew.user.domain.User;
+import com.codeit.monew.user.exception.UserNotFoundException;
 import com.codeit.monew.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -27,7 +31,7 @@ public class NotificationService {
 
 	public Notification create(NotificationCreateRequest request) {
 		User user = userRepository.findById(request.userId())
-			.orElseThrow(() -> new RuntimeException("User not found"));
+			.orElseThrow(() -> new UserNotFoundException().addDetail("NotificationCreateRequest.userId", request.userId()));
 
 		Notification notification = Notification.builder()
 			.user(user)
@@ -94,15 +98,15 @@ public class NotificationService {
 			UUID userId = UUID.fromString(monewRequestUserId);
 
 			if (!userRepository.existsById(userId)) {
-				throw new RuntimeException("User not found");
+				throw new UserNotFoundException();
 			}
 
 			if(!notificationRepository.existsById(notificationId)) {
-				throw new RuntimeException("Notification not found");
+				throw new NotificationNotFoundException();
 			}
 
 			Notification notification = notificationRepository.findByIdAndUserIdAndConfirmedFalse(notificationId, userId)
-				.orElseThrow(() -> new RuntimeException("Notification not found"));
+				.orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INPUT_VALUE));
 			notification.setConfirmed(true);
 
 			notificationRepository.save(notification);
