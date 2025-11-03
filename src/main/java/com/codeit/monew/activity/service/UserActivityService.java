@@ -2,13 +2,13 @@ package com.codeit.monew.activity.service;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
 import com.codeit.monew.activity.domain.UserActivity;
 import com.codeit.monew.activity.dto.UserActivityDto;
+import com.codeit.monew.activity.exception.UserActivityNotFoundException;
 import com.codeit.monew.activity.mapper.UserActivityMapper;
 import com.codeit.monew.activity.repository.UserActivityRepository;
 import com.codeit.monew.article.dto.ArticleViewDto;
@@ -39,26 +39,31 @@ public class UserActivityService {
 	private final ArticleViewRepository articleViewRepository;
 
 	public UserActivityDto getUserActivityInfo(UUID userId) {
+		log.debug("사용자 활동 내역 조회 요청 - userId = {}", userId);
 		if (userActivityRepository.existsById(userId)) {
+			log.debug("활동 내역을 mongo DB에서 조회.");
 			UserActivity userActivity = userActivityRepository.findById(userId)
-				.orElseThrow(() -> new RuntimeException("userActivity not found"));
+				.orElseThrow(UserActivityNotFoundException::new);
 			return userActivityMapper.toUserActivityDto(userActivity);
 		}
 
 		UserActivity userActivity = createUserActivity(userId);
 		userActivityRepository.save(userActivity);
+		log.info("활동 내역 조회 - userId: {}, nickname:{}", userActivity.getId(), userActivity.getNickname());
 
 		return userActivityMapper.toUserActivityDto(userActivity);
 	}
 
 	public void deleteUserActivity(UUID userId) {
+		log.debug("mongoDB에 사용자 활동 내역 존재 확인 - userId: {}", userId);
 		if (userActivityRepository.existsById(userId)) {
 			userActivityRepository.deleteById(userId);
+			log.info("mongoDB에서 사용자 활동 내역 삭제 - userId: {}", userId);
 		}
 	}
 
 	private UserActivity createUserActivity(UUID userId) {
-		log.info("Searching user by id: {}", userId);
+		log.debug("사용자의 활동 내역을 각각 postgreSQL에서 조회 - 사용자 정보, 구독 중인 관심사, 최근 작성한 댓글, 최근 좋아요를 누른 댓글, 최근 본 뉴스 기사");
 		User user = userRepository.findById(userId)
 			.orElseThrow(() -> new RuntimeException("User not found"));
 

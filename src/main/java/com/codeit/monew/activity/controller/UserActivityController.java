@@ -12,7 +12,9 @@ import com.codeit.monew.activity.dto.UserActivityDto;
 import com.codeit.monew.activity.service.UserActivityService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/user-activities")
@@ -22,6 +24,8 @@ public class UserActivityController {
 
 	@GetMapping("/{userId}")
 	public ResponseEntity<UserActivityDto> getUserActivity(@PathVariable String userId) {
+		log.info("GET /api/user-activities/{}", userId);
+
 		return ResponseEntity.ok(userActivityService.getUserActivityInfo(UUID.fromString(userId)));
 	}
 }
