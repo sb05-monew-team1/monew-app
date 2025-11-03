@@ -25,6 +25,7 @@ public enum ErrorCode {
 	ALREADY_SUBSCRIBED("이미 구독한 관심사입니다.", HttpStatus.CONFLICT),
 	INTEREST_NOT_FOUND("관심사 정보를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
 	SUBSCRIPTION_NOT_FOUND("구독 정보를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+	INVALID_INPUT_VALUE("유효하지 않은 입력 값입니다.", HttpStatus.BAD_REQUEST),
 
 	// Comment
 	COMMENT_NOT_FOUND("댓글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),

@@ -23,6 +23,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 
 import com.codeit.monew.common.dto.CursorPageResponse;
 import com.codeit.monew.common.exception.BusinessException;
@@ -30,7 +31,6 @@ import com.codeit.monew.common.exception.ErrorCode;
 import com.codeit.monew.common.util.PageResponseMapper;
 import com.codeit.monew.interest.domain.Interest;
 import com.codeit.monew.interest.domain.InterestKeyword;
-import com.codeit.monew.interest.domain.InterestOrder;
 import com.codeit.monew.interest.domain.InterestSubscription;
 import com.codeit.monew.interest.dto.InterestDto;
 import com.codeit.monew.interest.dto.InterestRegisterRequest;
@@ -317,7 +317,7 @@ class InterestServiceTest {
 			UUID userId = UUID.randomUUID();
 			InterestSearchRequest request = new InterestSearchRequest(
 				null,
-				InterestOrder.name,
+				"name",
 				"ASC",
 				null,
 				null,
@@ -335,24 +335,28 @@ class InterestServiceTest {
 				.keywords(new ArrayList<>())
 				.build();
 			List<Interest> interests = Arrays.asList(interest1, interest2);
-			Pageable pageable = PageRequest.of(0, 10);
+			Pageable pageable = PageRequest.of(0, 11, Sort.by(Sort.Direction.ASC, "name").and(Sort.by(Sort.Direction.DESC, "createdAt")));
 			Page<Interest> interestPage = new PageImpl<>(interests, pageable, interests.size());
 
-			when(interestRepository.findAll(any(Pageable.class))).thenReturn(interestPage);
-			when(interestRepository.count()).thenReturn(2L);
-			when(interestSubscriptionRepository.findInterestIdsByUserIdAndInterestIdsIn(any(), any())).thenReturn(
-				new HashSet<>());
-
-			List<InterestDto> dtoList = Arrays.asList(
-				new InterestDto(UUID.randomUUID(), "관심사1", List.of(), 0L, false),
-				new InterestDto(UUID.randomUUID(), "관심사2", List.of(), 0L, false)
-			);
-			when(interestMapper.toDtoList(any(), any())).thenReturn(dtoList);
+			when(interestRepository.count(any(Predicate.class))).thenReturn(2L);
+			when(interestRepository.findAll(any(Predicate.class), any(Pageable.class)))
+				.thenReturn(interestPage);
+			when(interestSubscriptionRepository.findInterestIdsByUserIdAndInterestIdsIn(any(), any()))
+				.thenReturn(new HashSet<>());
 
 			CursorPageResponse<InterestDto> expectedResponse = CursorPageResponse.<InterestDto>builder()
-				.content(dtoList).nextCursor(null).nextAfter(null).size(10).totalElements(2L).hasNext(false).build();
-			when(pageResponseMapper.toCursorPageResponse(any(Slice.class), any(), any(), anyLong())).thenReturn(
-				expectedResponse);
+				.content(Arrays.asList(
+					new InterestDto(UUID.randomUUID(), "관심사1", List.of(), 0L, false),
+					new InterestDto(UUID.randomUUID(), "관심사2", List.of(), 0L, false)
+				))
+				.nextCursor(null)
+				.nextAfter(null)
+				.size(10)
+				.totalElements(2L)
+				.hasNext(false)
+				.build();
+			when(pageResponseMapper.toCursorPageResponse(any(Slice.class), any(), any(), anyLong()))
+				.thenReturn(expectedResponse);
 
 			// when
 			CursorPageResponse<InterestDto> result = interestService.getInterests(request, userId);
@@ -360,7 +364,12 @@ class InterestServiceTest {
 			// then
 			assertNotNull(result);
 			assertEquals(2, result.content().size());
-			verify(interestRepository, times(1)).findAll(any(Pageable.class));
+			assertEquals(2L, result.totalElements());
+			assertFalse(result.hasNext());
+			verify(interestRepository, times(1)).count(any(Predicate.class));
+			verify(interestRepository, times(1)).findAll(any(Predicate.class), any(Pageable.class));
+			verify(interestSubscriptionRepository, times(1))
+				.findInterestIdsByUserIdAndInterestIdsIn(eq(userId), any());
 		}
 
 		@Test
@@ -368,7 +377,7 @@ class InterestServiceTest {
 		void getInterests_Success_WithKeyword() {
 			// given
 			UUID userId = UUID.randomUUID();
-			InterestSearchRequest request = new InterestSearchRequest("검색어", InterestOrder.name, "ASC", null, null, 10);
+			InterestSearchRequest request = new InterestSearchRequest("검색어", "name", "ASC", null, null, 10);
 
 			Interest interest = Interest.builder()
 				.name("검색어 포함 관심사")
@@ -377,22 +386,27 @@ class InterestServiceTest {
 				.build();
 
 			List<Interest> interests = List.of(interest);
-			Pageable pageable = PageRequest.of(0, 10);
+			Pageable pageable = PageRequest.of(0, 11, Sort.by(Sort.Direction.ASC, "name").and(Sort.by(Sort.Direction.DESC, "createdAt")));
 			Page<Interest> interestPage = new PageImpl<>(interests, pageable, interests.size());
 
+			when(interestRepository.count(any(Predicate.class))).thenReturn(1L);
 			when(interestRepository.findAll(any(Predicate.class), any(Pageable.class)))
 				.thenReturn(interestPage);
-			when(interestRepository.count(any(Predicate.class))).thenReturn(1L);
-			when(interestSubscriptionRepository.findInterestIdsByUserIdAndInterestIdsIn(any(), any())).thenReturn(
-				new HashSet<>());
-
-			List<InterestDto> dtoList = List.of(new InterestDto(UUID.randomUUID(), "검색어 포함 관심사", List.of(), 0L, false));
-			when(interestMapper.toDtoList(any(), any())).thenReturn(dtoList);
+			when(interestSubscriptionRepository.findInterestIdsByUserIdAndInterestIdsIn(any(), any()))
+				.thenReturn(new HashSet<>());
 
 			CursorPageResponse<InterestDto> expectedResponse = CursorPageResponse.<InterestDto>builder()
-				.content(dtoList).nextCursor(null).nextAfter(null).size(10).totalElements(1L).hasNext(false).build();
-			when(pageResponseMapper.toCursorPageResponse(any(Slice.class), any(), any(), anyLong())).thenReturn(
-				expectedResponse);
+				.content(List.of(
+					new InterestDto(UUID.randomUUID(), "검색어 포함 관심사", List.of(), 0L, false)
+				))
+				.nextCursor(null)
+				.nextAfter(null)
+				.size(10)
+				.totalElements(1L)
+				.hasNext(false)
+				.build();
+			when(pageResponseMapper.toCursorPageResponse(any(Slice.class), any(), any(), anyLong()))
+				.thenReturn(expectedResponse);
 
 			// when
 			CursorPageResponse<InterestDto> result = interestService.getInterests(request, userId);
@@ -400,6 +414,9 @@ class InterestServiceTest {
 			// then
 			assertNotNull(result);
 			assertEquals(1, result.content().size());
+			assertEquals(1L, result.totalElements());
+			verify(interestRepository, times(1)).count(any(Predicate.class));
+			verify(interestRepository, times(1)).findAll(any(Predicate.class), any(Pageable.class));
 		}
 
 		@Test
@@ -407,17 +424,28 @@ class InterestServiceTest {
 		void getInterests_EmptyResult() {
 			// given
 			UUID userId = UUID.randomUUID();
-			InterestSearchRequest request = new InterestSearchRequest(null, InterestOrder.name, "ASC", null, null, 10);
+			InterestSearchRequest request = new InterestSearchRequest(null, "name", "ASC", null, null, 10);
 
-			Page<Interest> emptyPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+			Page<Interest> emptyPage = new PageImpl<>(
+				List.of(),
+				PageRequest.of(0, 11, Sort.by(Sort.Direction.ASC, "name").and(Sort.by(Sort.Direction.DESC, "createdAt"))),
+				0
+			);
 
-			when(interestRepository.findAll(any(Pageable.class))).thenReturn(emptyPage);
-			when(interestRepository.count()).thenReturn(0L);
+			when(interestRepository.count(any(Predicate.class))).thenReturn(0L);
+			when(interestRepository.findAll(any(Predicate.class), any(Pageable.class)))
+				.thenReturn(emptyPage);
 
 			CursorPageResponse<InterestDto> expectedResponse = CursorPageResponse.<InterestDto>builder()
-				.content(List.of()).nextCursor(null).nextAfter(null).size(10).totalElements(0L).hasNext(false).build();
-			when(pageResponseMapper.toCursorPageResponse(any(Slice.class), any(), any(), anyLong())).thenReturn(
-				expectedResponse);
+				.content(List.of())
+				.nextCursor(null)
+				.nextAfter(null)
+				.size(10)
+				.totalElements(0L)
+				.hasNext(false)
+				.build();
+			when(pageResponseMapper.toCursorPageResponse(any(Slice.class), any(), any(), anyLong()))
+				.thenReturn(expectedResponse);
 
 			// when
 			CursorPageResponse<InterestDto> result = interestService.getInterests(request, userId);
@@ -426,6 +454,8 @@ class InterestServiceTest {
 			assertNotNull(result);
 			assertTrue(result.content().isEmpty());
 			assertEquals(0L, result.totalElements());
+			assertFalse(result.hasNext());
+			verify(interestRepository, times(1)).count(any(Predicate.class));
 		}
 	}
 
