@@ -18,3 +18,12 @@ logging:
   level:
     root: WARN
     com.codeit.monew: DEBUG
+
+monew:
+  storage:
+    s3:
+      access-key: test-access-key
+      secret-key: test-secret-key
+      region: ap-northeast-2
+      bucket: test-bucket
+      expiration: 600
