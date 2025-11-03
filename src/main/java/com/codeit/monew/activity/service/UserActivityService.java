@@ -2,7 +2,6 @@ package com.codeit.monew.activity.service;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -56,8 +55,10 @@ public class UserActivityService {
 	}
 
 	public void deleteUserActivity(UUID userId) {
+		log.debug("mongoDB에 사용자 활동 내역 존재 확인 - userId: {}", userId);
 		if (userActivityRepository.existsById(userId)) {
 			userActivityRepository.deleteById(userId);
+			log.info("mongoDB에서 사용자 활동 내역 삭제 - userId: {}", userId);
 		}
 	}
 
