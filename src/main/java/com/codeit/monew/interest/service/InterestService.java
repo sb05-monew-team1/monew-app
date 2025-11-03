@@ -5,7 +5,6 @@ import static com.codeit.monew.interest.domain.QInterest.*;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -28,7 +27,6 @@ import com.codeit.monew.common.exception.ErrorCode;
 import com.codeit.monew.common.util.PageResponseMapper;
 import com.codeit.monew.interest.domain.Interest;
 import com.codeit.monew.interest.domain.InterestKeyword;
-import com.codeit.monew.interest.domain.InterestOrder;
 import com.codeit.monew.interest.domain.InterestSubscription;
 import com.codeit.monew.interest.dto.InterestDto;
 import com.codeit.monew.interest.dto.InterestRegisterRequest;
@@ -41,8 +39,6 @@ import com.codeit.monew.interest.repository.InterestSubscriptionRepository;
 import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.repository.UserRepository;
 import com.querydsl.core.BooleanBuilder;
-import com.querydsl.core.types.Predicate;
-import com.querydsl.core.types.dsl.ComparableExpressionBase;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -165,7 +161,8 @@ public class InterestService {
 			throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
 		}
 
-		Sort.Direction direction = "ASC".equalsIgnoreCase(request.direction()) ? Sort.Direction.ASC : Sort.Direction.DESC;
+		Sort.Direction direction =
+			"ASC".equalsIgnoreCase(request.direction()) ? Sort.Direction.ASC : Sort.Direction.DESC;
 		Sort sort = Sort.by(direction, orderByField).and(Sort.by(Sort.Direction.DESC, "createdAt"));
 
 		int pageSize = request.limit();
@@ -212,10 +209,12 @@ public class InterestService {
 							Long cursorSubscriberCount = Long.parseLong(request.cursor());
 							if (direction == Sort.Direction.ASC) {
 								cursorBuilder.or(interest.subscriberCount.gt(cursorSubscriberCount));
-								cursorBuilder.or(interest.subscriberCount.eq(cursorSubscriberCount).and(interest.createdAt.lt(after)));
+								cursorBuilder.or(interest.subscriberCount.eq(cursorSubscriberCount)
+									.and(interest.createdAt.lt(after)));
 							} else {
 								cursorBuilder.or(interest.subscriberCount.lt(cursorSubscriberCount));
-								cursorBuilder.or(interest.subscriberCount.eq(cursorSubscriberCount).and(interest.createdAt.lt(after)));
+								cursorBuilder.or(interest.subscriberCount.eq(cursorSubscriberCount)
+									.and(interest.createdAt.lt(after)));
 							}
 						} catch (NumberFormatException e) {
 							log.error("Long 파싱 실패: {}", request.cursor(), e);
@@ -304,7 +303,6 @@ public class InterestService {
 		Slice<InterestDto> dtoSlice = new SliceImpl<>(dtos, slice.getPageable(), hasNext);
 		return pageResponseMapper.toCursorPageResponse(dtoSlice, nextCursor, nextAfter, totalElements);
 	}
-
 
 	/**
 	 * 관심사 구독

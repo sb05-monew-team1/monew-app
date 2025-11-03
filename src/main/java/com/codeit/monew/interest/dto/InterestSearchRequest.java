@@ -1,9 +1,5 @@
 package com.codeit.monew.interest.dto;
 
-import java.time.Instant;
-
-import com.codeit.monew.interest.domain.InterestOrder;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
