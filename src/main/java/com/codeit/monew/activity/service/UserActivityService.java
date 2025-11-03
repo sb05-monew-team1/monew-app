@@ -40,7 +40,9 @@ public class UserActivityService {
 	private final ArticleViewRepository articleViewRepository;
 
 	public UserActivityDto getUserActivityInfo(UUID userId) {
+		log.debug("사용자 활동 내역 조회 요청 - userId = {}", userId);
 		if (userActivityRepository.existsById(userId)) {
+			log.debug("활동 내역을 mongo DB에서 조회.");
 			UserActivity userActivity = userActivityRepository.findById(userId)
 				.orElseThrow(UserActivityNotFoundException::new);
 			return userActivityMapper.toUserActivityDto(userActivity);
@@ -48,6 +50,7 @@ public class UserActivityService {
 
 		UserActivity userActivity = createUserActivity(userId);
 		userActivityRepository.save(userActivity);
+		log.info("활동 내역 조회 - userId: {}, nickname:{}", userActivity.getId(), userActivity.getNickname());
 
 		return userActivityMapper.toUserActivityDto(userActivity);
 	}
@@ -59,7 +62,7 @@ public class UserActivityService {
 	}
 
 	private UserActivity createUserActivity(UUID userId) {
-		log.info("Searching user by id: {}", userId);
+		log.debug("사용자의 활동 내역을 각각 postgreSQL에서 조회 - 사용자 정보, 구독 중인 관심사, 최근 작성한 댓글, 최근 좋아요를 누른 댓글, 최근 본 뉴스 기사");
 		User user = userRepository.findById(userId)
 			.orElseThrow(() -> new RuntimeException("User not found"));
 
