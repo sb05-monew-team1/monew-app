@@ -4,6 +4,14 @@ spring:
     driver-class-name: org.postgresql.Driver
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
+  data:
+    mongodb:
+      uri: ${SPRING_MONGODB_URL}
+      port: 27017
+      database: monew
+      username: ${SPRING_MONGODB_USERNAME}
+      password: ${SPRING_MONGODB_PASSWORD}
+      authentication-database: admin
   jpa:
     hibernate:
       ddl-auto: validate
