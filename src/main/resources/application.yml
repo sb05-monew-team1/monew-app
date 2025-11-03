@@ -3,11 +3,6 @@ spring:
     active: dev # dev | prod
   config:
     import: optional:file:.env[.properties]
-  data:
-    mongodb:
-      uri: mongodb://localhost:27017/monew
-      port: 27017
-      database: monew
 
 monew:
   storage:
