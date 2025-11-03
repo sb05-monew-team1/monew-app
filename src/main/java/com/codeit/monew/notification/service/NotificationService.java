@@ -8,16 +8,22 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 
 import com.codeit.monew.common.dto.CursorPageResponse;
+import com.codeit.monew.common.exception.BusinessException;
+import com.codeit.monew.common.exception.ErrorCode;
 import com.codeit.monew.common.util.PageResponseMapper;
 import com.codeit.monew.notification.domain.Notification;
 import com.codeit.monew.notification.dto.NotificationCreateRequest;
 import com.codeit.monew.notification.dto.NotificationDto;
+import com.codeit.monew.notification.exception.NotificationNotFoundException;
 import com.codeit.monew.notification.repository.NotificationRepository;
 import com.codeit.monew.user.domain.User;
+import com.codeit.monew.user.exception.UserNotFoundException;
 import com.codeit.monew.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
@@ -26,8 +32,10 @@ public class NotificationService {
 	private final PageResponseMapper pageResponseMapper;
 
 	public Notification create(NotificationCreateRequest request) {
+		log.debug("알림 등록 시작 - userId: {}, resourceType: {}", request.userId(), request.resourceType());
+
 		User user = userRepository.findById(request.userId())
-			.orElseThrow(() -> new RuntimeException("User not found"));
+			.orElseThrow(() -> new UserNotFoundException().addDetail("NotificationCreateRequest.userId", request.userId()));
 
 		Notification notification = Notification.builder()
 			.user(user)
@@ -38,6 +46,8 @@ public class NotificationService {
 			.build();
 
 		notificationRepository.save(notification);
+		log.info("알림 등록 - id: {}, resourceType: {}, content: {}",  notification.getId(), notification.getResourceType(), notification.getContent());
+
 		return notification;
 	}
 
@@ -47,6 +57,8 @@ public class NotificationService {
 		int limit,
 		String monewRequestUserId
 	) {
+		log.debug("알림 목록 조회 시작 - cursor: {}, after: {}, userId: {}",
+			cursor, after, monewRequestUserId);
 		Slice<NotificationDto> slice = notificationRepository.search(
 			cursor,
 			after,
@@ -62,6 +74,7 @@ public class NotificationService {
 
 			nextAfter = last.createdAt().toString();
 			nextCursor = last.createdAt().toString();
+			log.debug("다음 페이지 커서 생성 - nextCursor: {}, nextAfter: {}", nextCursor, nextAfter);
 		}
 
 		long totalElements = notificationRepository.countUnConfirmed(monewRequestUserId);
@@ -71,10 +84,11 @@ public class NotificationService {
 
 	public void checkAllNotifications(String monewRequestUserId) {
 		try {
+			log.debug("모든 알림 확인 시작: userId: {}", monewRequestUserId);
 			UUID userId = UUID.fromString(monewRequestUserId);
 
 			if (!userRepository.existsById(userId)) {
-				throw new RuntimeException("User not found");
+				throw new UserNotFoundException();
 			}
 
 			List<Notification> notifications = notificationRepository.findByUserIdAndConfirmedFalse((userId));
@@ -83,29 +97,33 @@ public class NotificationService {
 			}
 
 			notificationRepository.saveAll(notifications);
+			log.info("모든 알림 확인 완료: userId: {}", userId);
 		} catch (IllegalArgumentException e) {
+			log.error("UUID 변환 실패: {}", monewRequestUserId, e);
 			throw new IllegalArgumentException(e);
 		}
 	}
 
 	public void checkNotification(String id, String monewRequestUserId) {
 		try {
+			log.debug("알림 확인 시작: notificationId: {}, userId: {}", id, monewRequestUserId);
 			UUID notificationId =  UUID.fromString(id);
 			UUID userId = UUID.fromString(monewRequestUserId);
 
 			if (!userRepository.existsById(userId)) {
-				throw new RuntimeException("User not found");
+				throw new UserNotFoundException();
 			}
 
 			if(!notificationRepository.existsById(notificationId)) {
-				throw new RuntimeException("Notification not found");
+				throw new NotificationNotFoundException();
 			}
 
 			Notification notification = notificationRepository.findByIdAndUserIdAndConfirmedFalse(notificationId, userId)
-				.orElseThrow(() -> new RuntimeException("Notification not found"));
+				.orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INPUT_VALUE));
 			notification.setConfirmed(true);
 
 			notificationRepository.save(notification);
+			log.info("알림 확인 완료: notificationId: {}, userId: {}", notificationId, userId);
 		} catch (IllegalArgumentException e) {
 			throw new IllegalArgumentException(e);
 		}

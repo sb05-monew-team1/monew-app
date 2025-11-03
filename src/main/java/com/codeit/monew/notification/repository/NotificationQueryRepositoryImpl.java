@@ -34,7 +34,6 @@ public class NotificationQueryRepositoryImpl implements NotificationQueryReposit
 		int limit,
 		String monewRequestUserId
 	) {
-		System.out.println("메서드 호출 후 cursor : " + cursor + ", after : " + after + "userId: " + monewRequestUserId);
 		BooleanBuilder builder = new BooleanBuilder();
 		builder.and(n.confirmed.eq(false));
 		if (monewRequestUserId != null && !monewRequestUserId.isBlank()) {
@@ -50,8 +49,6 @@ public class NotificationQueryRepositoryImpl implements NotificationQueryReposit
 			}
 		}
 		OrderSpecifier<?> orderByTime = new OrderSpecifier<>(Order.ASC, n.createdAt);
-
-		System.out.println("경우: " + builder);
 
 		List<NotificationDto> rowsPlusOne = queryFactory
 			.select(Projections.constructor(
