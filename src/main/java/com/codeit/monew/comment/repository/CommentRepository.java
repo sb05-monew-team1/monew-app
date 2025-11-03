@@ -16,7 +16,7 @@ import com.querydsl.core.types.Order;
 /**
  * 댓글 Repository
  */
-public interface CommentRepository extends JpaRepository<Comment, UUID> {
+public interface CommentRepository extends JpaRepository<Comment, UUID>, CommentQueryRepository {
 
 	/**
 	 * 특정 기사의 논리 삭제되지 않은 댓글 목록 조회 (날짜순 내림차순, 커서 페이지네이션)

@@ -4,6 +4,11 @@ spring:
     driver-class-name: org.postgresql.Driver
     username: monew_user
     password: monew1234
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/monew
+      port: 27017
+      database: monew
   jpa:
     hibernate:
       ddl-auto: validate
