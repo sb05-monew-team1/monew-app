@@ -11,7 +11,6 @@ import org.springframework.data.repository.query.Param;
 
 import com.codeit.monew.article.domain.Article;
 import com.codeit.monew.comment.domain.Comment;
-import com.querydsl.core.types.Order;
 
 /**
  * 댓글 Repository
