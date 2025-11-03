@@ -15,8 +15,12 @@ out
 .gitignore
 
 # 로그/임시
+logs/
 *.log
-tmp
+*.log.*
+*.out
+*.err
+*.gz
 
 .env
 monew.env

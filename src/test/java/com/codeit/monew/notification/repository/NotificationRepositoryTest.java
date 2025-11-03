@@ -38,10 +38,10 @@ public class NotificationRepositoryTest {
 
 		assertThat(first.content()).isEqualTo("알림 테스트용 데이터3");
 		assertThat(first.resourceId()).isEqualTo(UUID.fromString("40000000-0000-0000-0000-000000000003"));
-		assertThat(first.resourceType()).isEqualTo("comments");
+		assertThat(first.resourceType()).isEqualTo("commentLike");
 
 		assertThat(second.content()).isEqualTo("알림 테스트용 데이터2");
 		assertThat(second.resourceId()).isEqualTo(UUID.fromString("40000000-0000-0000-0000-000000000002"));
-		assertThat(second.resourceType()).isEqualTo("comments");
+		assertThat(second.resourceType()).isEqualTo("commentLike");
 	}
 }
