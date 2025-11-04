@@ -25,24 +25,39 @@ public class MdcLoggingFilter implements Filter {
 
 		String clientIp = getClientIp(req);
 
+		String previousRequestId = MDC.get("requestId");
+		String previousIp = MDC.get("ip");
+
 		try {
 			MDC.put("requestId", requestId);
 			MDC.put("ip", clientIp);
 
-			res.addHeader("X-Request-ID", requestId);
-			res.addHeader("X-Client-IP", clientIp);
+			res.setHeader("X-Request-ID", requestId);
+			res.setHeader("X-Client-IP", clientIp);
 
 			chain.doFilter(request, response);
 		} finally {
-			MDC.clear();
+			restoreMdcValue("requestId", previousRequestId);
+			restoreMdcValue("ip", previousIp);
 		}
 	}
 
 	private String getClientIp(HttpServletRequest request) {
 		String xfHeader = request.getHeader("X-Forwarded-For");
-		if (xfHeader == null) {
-			return request.getRemoteAddr();
+		if (xfHeader != null) {
+			String forwardedIp = xfHeader.split(",")[0].trim();
+			if (!forwardedIp.isEmpty() && !"unknown".equalsIgnoreCase(forwardedIp)) {
+				return forwardedIp;
+			}
 		}
-		return xfHeader.split(",")[0];
+		return request.getRemoteAddr();
+	}
+
+	private void restoreMdcValue(String key, String previousValue) {
+		if (previousValue == null) {
+			MDC.remove(key);
+		} else {
+			MDC.put(key, previousValue);
+		}
 	}
 }

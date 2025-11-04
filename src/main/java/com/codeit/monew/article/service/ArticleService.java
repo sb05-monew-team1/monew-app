@@ -69,6 +69,9 @@ public class ArticleService {
 	public CursorPageResponse<ArticleDto> search(ArticleSearchRequest request) {
 		validateUser(request.monewRequestUserId());
 
+		log.info("기사 검색 시작 userId={} orderBy={} direction={} cursor={} limit={}",
+			request.monewRequestUserId(), request.orderBy(), request.direction(), request.cursor(), request.limit());
+
 		ArticleSearchRequestFromService serviceRequest = ArticleSearchRequestFromService.from(request);
 
 		ArticleSearchResultDto search = articleRepository.search(serviceRequest);
@@ -93,26 +96,34 @@ public class ArticleService {
 		}
 
 		long totalElements = articleRepository.count();
+		log.debug("기사 검색 완료 userId={} 결과수={} 다음페이지여부={} nextCursor={} 전체건수={}",
+			request.monewRequestUserId(), slice.getNumberOfElements(), slice.hasNext(), nextCursor, totalElements);
 
 		return pageResponseMapper.toCursorPageResponse(slice, nextCursor, nextAfter, totalElements);
 	}
 
 	@Transactional(readOnly = true)
 	public ArticleDto search(UUID articleId, UUID userId) {
+		log.info("기사 단건 조회 articleId={} userId={}", articleId, userId);
+
 		Article article = validateArticle(articleId);
 		validateUser(userId);
 
 		boolean viewedByMe = articleViewRepository.existsByUserIdAndArticleId(userId, articleId);
+		log.debug("기사 단건 조회 결과 articleId={} viewedByMe={}", articleId, viewedByMe);
 
 		return articleMapper.toArticleDto(article, viewedByMe);
 	}
 
 	@Transactional
 	public ArticleViewDto registerArticleView(UUID articleId, UUID userId) {
+		log.info("기사 뷰 등록 articleId={} userId={}", articleId, userId);
+
 		Article article = validateArticle(articleId);
 		User user = validateUser(userId);
 
 		if (articleViewRepository.existsByUserIdAndArticleId(userId, articleId)) {
+			log.info("이미 등록된 기사 뷰 articleId={} userId={}", articleId, userId);
 			throw new ArticleViewAlreadyExistException().addDetail("articleId", articleId).addDetail("userId", userId);
 		}
 
@@ -124,35 +135,46 @@ public class ArticleService {
 		ArticleViewDto dto = articleViewMapper.toDto(articleView);
 
 		userActivityService.deleteUserActivity(user.getId());
+		log.debug("기사 뷰 등록 완료 articleViewId={} articleId={} userId={}", articleView.getId(), articleId, userId);
 
 		return dto;
 	}
 
 	@Transactional(readOnly = true)
 	public List<String> getSources() {
+		log.debug("기사 출처 목록 조회");
 		return List.of(Arrays.stream(ArticleSource.values()).map(Enum::name).toArray(String[]::new));
 	}
 
 	@Transactional
 	public void deleteSoft(UUID articleId) {
+		log.info("기사 논리 삭제 처리 articleId={}", articleId);
+
 		Article article = validateArticle(articleId);
 		article.deleteSoft(Instant.now());
+		log.debug("기사 논리 삭제 완료 articleId={}", articleId);
 	}
 
 	@Transactional
 	public void deleteHard(UUID articleId) {
+		log.info("기사 물리 삭제 처리 articleId={}", articleId);
+
 		// validateArticle 메소드의 경우 논리 삭제된 기사까지 검증하기 때문에 물리 삭제에선 검증 로직 따로 작성
 		if (!articleRepository.existsById(articleId)) {
+			log.warn("물리 삭제 대상 기사를 찾을 수 없음 articleId={}", articleId);
 			throw new ArticleNotFoundException().addDetail("articleId", articleId);
 		}
 
 		articleRepository.deleteById(articleId);
+		log.debug("기사 물리 삭제 완료 articleId={}", articleId);
 	}
 
 	@Transactional
 	public ArticleRestoreResultDto restore(LocalDateTime from, LocalDateTime to) {
 		ZoneId zone = ZoneId.of("Asia/Seoul");
 		LocalDateTime restoreDate = LocalDateTime.now();
+
+		log.info("기사 백업 복원 시작 from={} to={}", from, to);
 
 		List<UUID> restoredIds = new ArrayList<>();
 		Set<String> sourceUrls = articleRepository.findAllSourceUrls();
@@ -162,9 +184,10 @@ public class ArticleService {
 			try {
 				stream = articleStorage.get(i.atZone(zone).format(DateTimeFormatter.ISO_LOCAL_DATE));
 			} catch (S3Exception e) {
-				log.warn("S3로부터 백업 파일을 불러오는 것에 실패했습니다. {}", i);
+				log.warn("S3 백업 파일 불러오기 실패 date={}", i, e);
 			}
 			if (stream == null) {
+				log.debug("백업 파일이 존재하지 않음 date={}", i);
 				continue;
 			}
 			List<Article> articles;
@@ -173,6 +196,7 @@ public class ArticleService {
 			} catch (IOException e) {
 				throw new StorageException(ErrorCode.ARTICLE_RESTORE_FAILED, e);
 			}
+			log.debug("기사 복원 처리 건수={} date={}", articles.size(), i);
 			articleRepository.saveAll(articles);
 			restoredIds.addAll(articles.stream().map(Article::getId).toList());
 		}

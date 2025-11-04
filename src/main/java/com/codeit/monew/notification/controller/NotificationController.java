@@ -16,7 +16,9 @@ import com.codeit.monew.notification.dto.NotificationDto;
 import com.codeit.monew.notification.service.NotificationService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("api/notifications")
@@ -31,6 +33,8 @@ public class NotificationController {
 		@RequestParam int limit,
 		@RequestHeader("Monew-Request-User-ID") String monewRequestUserId
 	) {
+		log.info("GET api/notifications");
+
 		return notificationService.getNotifications(
 			cursor,
 			after,
@@ -41,6 +45,8 @@ public class NotificationController {
 
 	@PatchMapping
 	public ResponseEntity<Void> checkAllNotifications(@RequestHeader("Monew-Request-User-ID") String monewRequestUserId) {
+		log.info("PATCH /api/notifications");
+
 		notificationService.checkAllNotifications(monewRequestUserId);
 		return ResponseEntity.ok().build();
 	}
@@ -50,6 +56,7 @@ public class NotificationController {
 		@PathVariable String notificationId,
 		@RequestHeader("Monew-Request-User-ID") String monewRequestUserId
 	) {
+		log.info("PATCH /api/notifications/{}", notificationId);
 		notificationService.checkNotification(notificationId, monewRequestUserId);
 		return ResponseEntity.ok().build();
 	}

@@ -211,20 +211,20 @@ public class CommentService {
 
 		log.info("댓글 좋아요 등록 완료 - commentId: {}, userId: {}", commentId, userId);
 
-		if (!comment.getUser().getId().equals(userId)) {
-			String notificationMsg = user.getNickname() + "님이 나의 댓글을 좋아합니다.";
-			NotificationCreateRequest notificationCreateRequest = new NotificationCreateRequest(
-				comment.getUser().getId(),
-				notificationMsg,
-				"commentLike",
-				user.getId()
-			);
+		log.debug("댓글 좋아요 알림 등록 시작: {}", userId);
+		String notificationMsg = user.getNickname() + "님이 나의 댓글을 좋아합니다.";
+		NotificationCreateRequest notificationCreateRequest = new NotificationCreateRequest(
+			comment.getUser().getId(),
+			notificationMsg,
+			"comment",
+			commentId
+		);
 
-			// System.out.println("댓글 좋아요 알림 생성 : " + notificationService.create(notificationCreateRequest));
-			notificationService.create(notificationCreateRequest);
+		notificationService.create(notificationCreateRequest);
+		log.info("댓글 좋아요 알림 등록 완료 - commentId: {}, userId: {}", commentId, userId);
 
-			userActivityService.deleteUserActivity(user.getId());
-		}
+		log.debug("사용자 활동 내역 mongoDB에서 삭제 - userId: {}", user.getId());
+		userActivityService.deleteUserActivity(user.getId());
 
 		// 좋아요한 댓글 정보 반환 (likedByMe = true)
 		return commentMapper.toDto(comment, comment.getUser().getNickname(), true);
@@ -314,13 +314,17 @@ public class CommentService {
 				? Instant.parse(request.cursor()) : null;
 
 			if (isDesc) {
-				commentSlice = commentRepository.findByArticleAndNotDeletedOrderByDateDesc(
-					article, dateCursor, pageable
-				);
+				commentSlice = (dateCursor == null)
+					? commentRepository.findByArticleAndDeletedAtIsNullOrderByCreatedAtDesc(article, pageable)
+					: commentRepository.findByArticleAndDeletedAtIsNullAndCreatedAtLessThanOrderByCreatedAtDesc(
+						article, dateCursor, pageable
+					);
 			} else {
-				commentSlice = commentRepository.findByArticleAndNotDeletedOrderByDateAsc(
-					article, dateCursor, pageable
-				);
+				commentSlice = (dateCursor == null)
+					? commentRepository.findByArticleAndDeletedAtIsNullOrderByCreatedAtAsc(article, pageable)
+					: commentRepository.findByArticleAndDeletedAtIsNullAndCreatedAtGreaterThanOrderByCreatedAtAsc(
+						article, dateCursor, pageable
+					);
 			}
 		}
 

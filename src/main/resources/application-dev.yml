@@ -24,7 +24,7 @@ spring:
 
 logging:
   level:
-    root: DEBUG
+    root: info
     com.codeit.monew: DEBUG
 management:
   endpoints:
