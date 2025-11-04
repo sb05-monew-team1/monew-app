@@ -13,8 +13,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.codeit.monew.activity.domain.UserActivity;
 import com.codeit.monew.activity.dto.UserActivityDto;
@@ -42,7 +42,7 @@ public class UserActivityServiceTest {
 	private ArticleViewRepository articleViewRepository;
 	@Autowired
 	private UserActivityService userActivityService;
-	@MockBean
+	@MockitoBean
 	private UserActivityRepository userActivityRepository;
 
 	@Nested
