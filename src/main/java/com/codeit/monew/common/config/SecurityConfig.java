@@ -36,6 +36,6 @@ public class SecurityConfig {
     http.formLogin(form -> form.disable());
     http.httpBasic(basic -> basic.disable()); // (선택) Basic Auth 비활성화
 
-    return http.build();
-  }
+		return http.build();
+	}
 }

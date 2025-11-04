@@ -1,17 +1,24 @@
 package com.codeit.monew.common.log;
 
-import jakarta.servlet.*;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.UUID;
 
 import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
-import java.util.UUID;
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class MdcLoggingFilter implements Filter {
+
+	private static final String REQUEST_ID_KEY = "requestId";
+	private static final String IP_KEY = "ip";
 
 	@Override
 	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws
@@ -25,24 +32,39 @@ public class MdcLoggingFilter implements Filter {
 
 		String clientIp = getClientIp(req);
 
-		try {
-			MDC.put("requestId", requestId);
-			MDC.put("ip", clientIp);
+		String previousRequestId = MDC.get(REQUEST_ID_KEY);
+		String previousIp = MDC.get(IP_KEY);
 
-			res.addHeader("X-Request-ID", requestId);
-			res.addHeader("X-Client-IP", clientIp);
+		try {
+			MDC.put(REQUEST_ID_KEY, requestId);
+			MDC.put(IP_KEY, clientIp);
+
+			res.setHeader("X-Request-ID", requestId);
+			res.setHeader("X-Client-IP", clientIp);
 
 			chain.doFilter(request, response);
 		} finally {
-			MDC.clear();
+			restoreMdcValue(REQUEST_ID_KEY, previousRequestId);
+			restoreMdcValue(IP_KEY, previousIp);
 		}
 	}
 
 	private String getClientIp(HttpServletRequest request) {
 		String xfHeader = request.getHeader("X-Forwarded-For");
-		if (xfHeader == null) {
-			return request.getRemoteAddr();
+		if (xfHeader != null) {
+			String forwardedIp = xfHeader.split(",")[0].trim();
+			if (!forwardedIp.isEmpty() && !"unknown".equalsIgnoreCase(forwardedIp)) {
+				return forwardedIp;
+			}
 		}
-		return xfHeader.split(",")[0];
+		return request.getRemoteAddr();
+	}
+
+	private void restoreMdcValue(String key, String previousValue) {
+		if (previousValue == null) {
+			MDC.remove(key);
+		} else {
+			MDC.put(key, previousValue);
+		}
 	}
 }

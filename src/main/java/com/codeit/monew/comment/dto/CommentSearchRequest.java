@@ -34,9 +34,9 @@ public record CommentSearchRequest(
 ) {
 
 	public static CommentSearchRequest filter(CommentSearchRequest r, UUID monewRequestUserId) {
-		int limit = clampSize(r.limit, 10, 1, 100);
-		Set<String> allowed = Set.of("date", "likeCount");
-		String orderBy = normalizeOrderBy(r.orderBy, allowed, "date");
+		int limit = clampSize(r.limit, 50, 1, 100);
+		Set<String> allowed = Set.of("createdAt", "likeCount");
+		String orderBy = normalizeOrderBy(r.orderBy, allowed, "createdAt");
 
 		return new CommentSearchRequest(
 			r.articleId,

@@ -1,7 +1,6 @@
 package com.codeit.monew.comment.domain;
 
 import com.codeit.monew.common.base.BaseDomain;
-import com.codeit.monew.common.base.BaseUpdatableDomain;
 import com.codeit.monew.user.domain.User;
 
 import jakarta.persistence.Entity;

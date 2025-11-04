@@ -39,10 +39,13 @@ public class ArticleStorage {
 
 	public InputStream get(String date) {
 		String key = keyOf(date);
+		log.info("S3 백업 파일 조회 bucket={} key={}", bucket, key);
 		GetObjectRequest request = GetObjectRequest.builder()
 			.bucket(bucket)
 			.key(key)
 			.build();
-		return s3Client.getObject(request);
+		InputStream stream = s3Client.getObject(request);
+		log.debug("S3 백업 스트림 확보 date={} available={}", date, stream != null);
+		return stream;
 	}
 }
