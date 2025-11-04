@@ -35,7 +35,8 @@ public class NotificationService {
 		log.debug("알림 등록 시작 - userId: {}, resourceType: {}", request.userId(), request.resourceType());
 
 		User user = userRepository.findById(request.userId())
-			.orElseThrow(() -> new UserNotFoundException().addDetail("NotificationCreateRequest.userId", request.userId()));
+			.orElseThrow(
+				() -> new UserNotFoundException().addDetail("NotificationCreateRequest.userId", request.userId()));
 
 		Notification notification = Notification.builder()
 			.user(user)
@@ -46,7 +47,8 @@ public class NotificationService {
 			.build();
 
 		notificationRepository.save(notification);
-		log.info("알림 등록 - id: {}, resourceType: {}, content: {}",  notification.getId(), notification.getResourceType(), notification.getContent());
+		log.info("알림 등록 - id: {}, resourceType: {}, content: {}", notification.getId(), notification.getResourceType(),
+			notification.getContent());
 
 		return notification;
 	}
@@ -92,7 +94,7 @@ public class NotificationService {
 			}
 
 			List<Notification> notifications = notificationRepository.findByUserIdAndConfirmedFalse((userId));
-			for(Notification notification : notifications) {
+			for (Notification notification : notifications) {
 				notification.setConfirmed(true);
 			}
 
@@ -107,18 +109,19 @@ public class NotificationService {
 	public void checkNotification(String id, String monewRequestUserId) {
 		try {
 			log.debug("알림 확인 시작: notificationId: {}, userId: {}", id, monewRequestUserId);
-			UUID notificationId =  UUID.fromString(id);
+			UUID notificationId = UUID.fromString(id);
 			UUID userId = UUID.fromString(monewRequestUserId);
 
 			if (!userRepository.existsById(userId)) {
 				throw new UserNotFoundException();
 			}
 
-			if(!notificationRepository.existsById(notificationId)) {
+			if (!notificationRepository.existsById(notificationId)) {
 				throw new NotificationNotFoundException();
 			}
 
-			Notification notification = notificationRepository.findByIdAndUserIdAndConfirmedFalse(notificationId, userId)
+			Notification notification = notificationRepository.findByIdAndUserIdAndConfirmedFalse(notificationId,
+					userId)
 				.orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INPUT_VALUE));
 			notification.setConfirmed(true);
 

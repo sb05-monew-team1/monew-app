@@ -339,7 +339,8 @@ class InterestServiceTest {
 				.keywords(new ArrayList<>())
 				.build();
 			List<Interest> interests = Arrays.asList(interest1, interest2);
-			Pageable pageable = PageRequest.of(0, 11, Sort.by(Sort.Direction.ASC, "name").and(Sort.by(Sort.Direction.DESC, "createdAt")));
+			Pageable pageable = PageRequest.of(0, 11,
+				Sort.by(Sort.Direction.ASC, "name").and(Sort.by(Sort.Direction.DESC, "createdAt")));
 			Page<Interest> interestPage = new PageImpl<>(interests, pageable, interests.size());
 
 			when(interestRepository.count(any(Predicate.class))).thenReturn(2L);
@@ -390,7 +391,8 @@ class InterestServiceTest {
 				.build();
 
 			List<Interest> interests = List.of(interest);
-			Pageable pageable = PageRequest.of(0, 11, Sort.by(Sort.Direction.ASC, "name").and(Sort.by(Sort.Direction.DESC, "createdAt")));
+			Pageable pageable = PageRequest.of(0, 11,
+				Sort.by(Sort.Direction.ASC, "name").and(Sort.by(Sort.Direction.DESC, "createdAt")));
 			Page<Interest> interestPage = new PageImpl<>(interests, pageable, interests.size());
 
 			when(interestRepository.count(any(Predicate.class))).thenReturn(1L);
@@ -432,7 +434,8 @@ class InterestServiceTest {
 
 			Page<Interest> emptyPage = new PageImpl<>(
 				List.of(),
-				PageRequest.of(0, 11, Sort.by(Sort.Direction.ASC, "name").and(Sort.by(Sort.Direction.DESC, "createdAt"))),
+				PageRequest.of(0, 11,
+					Sort.by(Sort.Direction.ASC, "name").and(Sort.by(Sort.Direction.DESC, "createdAt"))),
 				0
 			);
 

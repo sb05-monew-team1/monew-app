@@ -317,14 +317,14 @@ public class CommentService {
 				commentSlice = (dateCursor == null)
 					? commentRepository.findByArticleAndDeletedAtIsNullOrderByCreatedAtDesc(article, pageable)
 					: commentRepository.findByArticleAndDeletedAtIsNullAndCreatedAtLessThanOrderByCreatedAtDesc(
-						article, dateCursor, pageable
-					);
+					article, dateCursor, pageable
+				);
 			} else {
 				commentSlice = (dateCursor == null)
 					? commentRepository.findByArticleAndDeletedAtIsNullOrderByCreatedAtAsc(article, pageable)
 					: commentRepository.findByArticleAndDeletedAtIsNullAndCreatedAtGreaterThanOrderByCreatedAtAsc(
-						article, dateCursor, pageable
-					);
+					article, dateCursor, pageable
+				);
 			}
 		}
 

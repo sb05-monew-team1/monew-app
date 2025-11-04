@@ -29,17 +29,13 @@ import com.codeit.monew.article.mapper.ArticleMapper;
 import com.codeit.monew.article.repository.ArticleRepository;
 import com.codeit.monew.article.repository.ArticleViewRepository;
 import com.codeit.monew.article.service.ArticleService;
-import com.codeit.monew.article.service.ArticleStorage;
 import com.codeit.monew.common.dto.CursorPageResponse;
 import com.codeit.monew.common.util.PageResponseMapper;
-import com.codeit.monew.activity.service.UserActivityService;
-import com.codeit.monew.user.domain.User;
-import com.codeit.monew.user.repository.UserRepository;
 import com.codeit.monew.interest.dto.SubscriptionDto;
 import com.codeit.monew.interest.repository.InterestSubscriptionRepository;
+import com.codeit.monew.user.domain.User;
+import com.codeit.monew.user.repository.UserRepository;
 import com.querydsl.core.types.Order;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.codeit.monew.article.mapper.ArticleViewMapper;
 
 @ExtendWith(MockitoExtension.class)
 public class ArticleServiceTest {

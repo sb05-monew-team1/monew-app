@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import com.codeit.monew.activity.domain.UserActivity;
 import com.codeit.monew.activity.dto.UserActivityDto;
 import com.codeit.monew.activity.service.UserActivityService;
 import com.codeit.monew.article.dto.ArticleViewDto;
@@ -78,7 +77,7 @@ public class UserActivityServiceTest {
 	class searchUserActivity {
 		@Test
 		@DisplayName("유저 활동 목록 첫 조회")
-		public void createUserActivityTest () {
+		public void createUserActivityTest() {
 			UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
 			UserActivityDto userActivity = userActivityService.getUserActivityInfo(userId);
 			System.out.println("유저 활동 조회 : " + userActivity.toString());
@@ -86,7 +85,7 @@ public class UserActivityServiceTest {
 
 		@Test
 		@DisplayName("유저 활동 목록 mongoDB에서 조회")
-		public void searchUserActivityMongoDBTest () {
+		public void searchUserActivityMongoDBTest() {
 			System.out.println("createUserActivityTest를 통해 이미 db에 저장되었다고 가정(디버깅을 통해 확인).");
 			UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
 			UserActivityDto userActivity = userActivityService.getUserActivityInfo(userId);
@@ -96,11 +95,10 @@ public class UserActivityServiceTest {
 
 	@Test
 	@DisplayName("mongodb에서 삭제하는 테스트")
-	public void deleteUserActivityMongoDBTest () {
+	public void deleteUserActivityMongoDBTest() {
 		System.out.println("삭제: ");
 		UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
 		userActivityService.deleteUserActivity(userId);
 	}
-
 
 }
