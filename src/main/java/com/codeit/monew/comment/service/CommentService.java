@@ -314,13 +314,17 @@ public class CommentService {
 				? Instant.parse(request.cursor()) : null;
 
 			if (isDesc) {
-				commentSlice = commentRepository.findByArticleAndNotDeletedOrderByDateDesc(
-					article, dateCursor, pageable
-				);
+				commentSlice = (dateCursor == null)
+					? commentRepository.findByArticleAndDeletedAtIsNullOrderByCreatedAtDesc(article, pageable)
+					: commentRepository.findByArticleAndDeletedAtIsNullAndCreatedAtLessThanOrderByCreatedAtDesc(
+						article, dateCursor, pageable
+					);
 			} else {
-				commentSlice = commentRepository.findByArticleAndNotDeletedOrderByDateAsc(
-					article, dateCursor, pageable
-				);
+				commentSlice = (dateCursor == null)
+					? commentRepository.findByArticleAndDeletedAtIsNullOrderByCreatedAtAsc(article, pageable)
+					: commentRepository.findByArticleAndDeletedAtIsNullAndCreatedAtGreaterThanOrderByCreatedAtAsc(
+						article, dateCursor, pageable
+					);
 			}
 		}
 

@@ -18,26 +18,36 @@ import com.codeit.monew.comment.domain.Comment;
 public interface CommentRepository extends JpaRepository<Comment, UUID>, CommentQueryRepository {
 
 	/**
+	 * 특정 기사의 논리 삭제되지 않은 댓글 목록 조회 (날짜순 내림차순)
+	 */
+	Slice<Comment> findByArticleAndDeletedAtIsNullOrderByCreatedAtDesc(
+		Article article,
+		Pageable pageable
+	);
+
+	/**
+	 * 특정 기사의 논리 삭제되지 않은 댓글 목록 조회 (날짜순 오름차순)
+	 */
+	Slice<Comment> findByArticleAndDeletedAtIsNullOrderByCreatedAtAsc(
+		Article article,
+		Pageable pageable
+	);
+
+	/**
 	 * 특정 기사의 논리 삭제되지 않은 댓글 목록 조회 (날짜순 내림차순, 커서 페이지네이션)
 	 */
-	@Query("SELECT c FROM Comment c WHERE c.article = :article AND c.deletedAt IS NULL " +
-		"AND (:cursor IS NULL OR c.createdAt < :cursor) " +
-		"ORDER BY c.createdAt DESC")
-	Slice<Comment> findByArticleAndNotDeletedOrderByDateDesc(
-		@Param("article") Article article,
-		@Param("cursor") Instant cursor,
+	Slice<Comment> findByArticleAndDeletedAtIsNullAndCreatedAtLessThanOrderByCreatedAtDesc(
+		Article article,
+		Instant cursor,
 		Pageable pageable
 	);
 
 	/**
 	 * 특정 기사의 논리 삭제되지 않은 댓글 목록 조회 (날짜순 오름차순, 커서 페이지네이션)
 	 */
-	@Query("SELECT c FROM Comment c WHERE c.article = :article AND c.deletedAt IS NULL " +
-		"AND (:cursor IS NULL OR c.createdAt > :cursor) " +
-		"ORDER BY c.createdAt ASC")
-	Slice<Comment> findByArticleAndNotDeletedOrderByDateAsc(
-		@Param("article") Article article,
-		@Param("cursor") Instant cursor,
+	Slice<Comment> findByArticleAndDeletedAtIsNullAndCreatedAtGreaterThanOrderByCreatedAtAsc(
+		Article article,
+		Instant cursor,
 		Pageable pageable
 	);
 
