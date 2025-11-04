@@ -18,6 +18,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.codeit.monew.activity.domain.UserActivity;
 import com.codeit.monew.activity.dto.UserActivityDto;
+import com.codeit.monew.activity.repository.UserActivityRepository;
 import com.codeit.monew.activity.service.UserActivityService;
 import com.codeit.monew.article.dto.ArticleViewDto;
 import com.codeit.monew.article.repository.ArticleViewRepository;
@@ -27,7 +28,6 @@ import com.codeit.monew.comment.repository.CommentLikeRepository;
 import com.codeit.monew.comment.repository.CommentRepository;
 import com.codeit.monew.interest.dto.SubscriptionDto;
 import com.codeit.monew.interest.repository.InterestSubscriptionRepository;
-import com.codeit.monew.activity.repository.UserActivityRepository;
 
 @SpringBootTest
 @ActiveProfiles("test")

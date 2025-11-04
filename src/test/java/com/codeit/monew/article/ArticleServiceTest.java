@@ -312,12 +312,13 @@ public class ArticleServiceTest {
 			given(pageResponseMapper.toCursorPageResponse(any(), any(), any(), anyLong()))
 				.willAnswer(invocation -> {
 					Slice<ArticleDto> highlighted = invocation.getArgument(0);
+					Number totalElements = invocation.getArgument(3, Number.class);
 					return CursorPageResponse.<ArticleDto>builder()
 						.content(highlighted.getContent())
-						.nextCursor(invocation.getArgument(1))
-						.nextAfter(invocation.getArgument(2))
+						.nextCursor(invocation.getArgument(1, String.class))
+						.nextAfter(invocation.getArgument(2, String.class))
 						.size(highlighted.getNumberOfElements())
-						.totalElements(invocation.getArgument(3))
+						.totalElements(totalElements.longValue())
 						.hasNext(highlighted.hasNext())
 						.build();
 				});
@@ -328,6 +329,81 @@ public class ArticleServiceTest {
 			ArticleDto highlighted = response.content().get(0);
 			assertThat(highlighted.title()).isEqualTo("국내 <b>주식</b> 시장 리포트");
 			assertThat(highlighted.summary()).isEqualTo("<b>주식</b>과 <b>주</b> 전망");
+		}
+
+		@Test
+		@DisplayName("관심 키워드가 없으면 텍스트를 수정하지 않는다")
+		void searchReturnsOriginalContentWhenNoKeywords() {
+			UUID userId = UUID.randomUUID();
+
+			ArticleSearchRequest request = new ArticleSearchRequest(
+				null,
+				null,
+				List.of(),
+				null,
+				null,
+				"publishDate",
+				Order.DESC,
+				null,
+				null,
+				5,
+				userId
+			);
+
+			ArticleDto original = new ArticleDto(
+				UUID.randomUUID(),
+				ArticleSource.NAVER,
+				"url",
+				"그냥 기사 제목",
+				Instant.now(),
+				"요약 내용",
+				0L,
+				0L,
+				false
+			);
+
+			Slice<ArticleDto> articleSlice = new SliceImpl<>(List.of(original), Pageable.ofSize(5), false);
+			ArticleSearchResultDto searchResult = new ArticleSearchResultDto(articleSlice, null);
+
+			SubscriptionDto nullKeywords = new SubscriptionDto(
+				UUID.randomUUID(),
+				UUID.randomUUID(),
+				"빈 관심사",
+				List.of("", " "),
+				0L,
+				Instant.now()
+			);
+
+			given(userRepository.findById(userId)).willReturn(Optional.ofNullable(User.builder()
+				.email("no-keyword@example.com")
+				.nickname("tester")
+				.password("secret")
+				.build()));
+			given(articleRepository.search(any())).willReturn(searchResult);
+			given(articleRepository.count()).willReturn(0L);
+			given(interestSubscriptionRepository.searchSubsCription(userId))
+				.willReturn(Arrays.asList(null, new SubscriptionDto(
+					UUID.randomUUID(), UUID.randomUUID(), "null keywords", null, 0L, Instant.now()), nullKeywords));
+			given(pageResponseMapper.toCursorPageResponse(any(), any(), any(), anyLong()))
+				.willAnswer(invocation -> {
+					@SuppressWarnings("unchecked")
+					Slice<ArticleDto> slice = invocation.getArgument(0);
+					assertThat(slice).isSameAs(articleSlice);
+					Number totalElements = invocation.getArgument(3, Number.class);
+					return CursorPageResponse.<ArticleDto>builder()
+						.content(slice.getContent())
+						.nextCursor(invocation.getArgument(1, String.class))
+						.nextAfter(invocation.getArgument(2, String.class))
+						.size(slice.getNumberOfElements())
+						.totalElements(totalElements.longValue())
+						.hasNext(slice.hasNext())
+						.build();
+				});
+
+			CursorPageResponse<ArticleDto> response = articleService.search(request);
+
+			assertThat(response.content()).hasSize(1);
+			assertThat(response.content().get(0)).isSameAs(original);
 		}
 	}
 

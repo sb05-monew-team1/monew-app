@@ -111,12 +111,13 @@ class CommentServiceTest {
 		given(pageResponseMapper.toCursorPageResponse(any(), any(), any(), anyLong()))
 			.willAnswer(invocation -> {
 				Slice<CommentDto> slice = invocation.getArgument(0);
+				Number totalElements = invocation.getArgument(3, Number.class);
 				return CursorPageResponse.<CommentDto>builder()
 					.content(slice.getContent())
-					.nextCursor(invocation.getArgument(1))
-					.nextAfter(invocation.getArgument(2))
+					.nextCursor(invocation.getArgument(1, String.class))
+					.nextAfter(invocation.getArgument(2, String.class))
 					.size(slice.getNumberOfElements())
-					.totalElements(invocation.getArgument(3))
+					.totalElements(totalElements.longValue())
 					.hasNext(slice.hasNext())
 					.build();
 			});
@@ -186,12 +187,13 @@ class CommentServiceTest {
 		given(pageResponseMapper.toCursorPageResponse(any(), any(), any(), anyLong()))
 			.willAnswer(invocation -> {
 				Slice<CommentDto> slice = invocation.getArgument(0);
+				Number totalElements = invocation.getArgument(3, Number.class);
 				return CursorPageResponse.<CommentDto>builder()
 					.content(slice.getContent())
-					.nextCursor(invocation.getArgument(1))
-					.nextAfter(invocation.getArgument(2))
+					.nextCursor(invocation.getArgument(1, String.class))
+					.nextAfter(invocation.getArgument(2, String.class))
 					.size(slice.getNumberOfElements())
-					.totalElements(invocation.getArgument(3))
+					.totalElements(totalElements.longValue())
 					.hasNext(slice.hasNext())
 					.build();
 			});
@@ -203,6 +205,161 @@ class CommentServiceTest {
 		assertThat(response.hasNext()).isFalse();
 		verify(commentRepository).findByArticleAndDeletedAtIsNullAndCreatedAtGreaterThanOrderByCreatedAtAsc(
 			article, cursorInstant, PageRequest.of(0, request.limit() + 1));
+	}
+
+	@Test
+	@DisplayName("날짜순 내림차순 조회 시 최신 순서로 커서를 생성한다")
+	@SuppressWarnings("unchecked")
+	void getCommentsDateOrderDescWithoutCursor() {
+		UUID articleId = UUID.randomUUID();
+		UUID requestUserId = UUID.randomUUID();
+		CommentSearchRequest request = new CommentSearchRequest(
+			articleId,
+			"createdAt",
+			Order.DESC,
+			null,
+			null,
+			2,
+			requestUserId
+		);
+
+		Article article = buildArticle(articleId);
+		User requestUser = buildUser(requestUserId, "viewer");
+		User commentAuthor = buildUser(UUID.randomUUID(), "author");
+		Instant firstCreated = Instant.parse("2024-06-02T11:30:00Z");
+		Instant secondCreated = Instant.parse("2024-06-02T11:20:00Z");
+
+		Comment firstComment = Comment.builder()
+			.id(UUID.randomUUID())
+			.article(article)
+			.user(commentAuthor)
+			.content("latest")
+			.likeCount(1L)
+			.createdAt(firstCreated)
+			.build();
+
+		Comment secondComment = Comment.builder()
+			.id(UUID.randomUUID())
+			.article(article)
+			.user(commentAuthor)
+			.content("older")
+			.likeCount(0L)
+			.createdAt(secondCreated)
+			.build();
+
+		Slice<Comment> commentSlice = new SliceImpl<>(
+			List.of(firstComment, secondComment),
+			Pageable.ofSize(request.limit() + 1),
+			true
+		);
+
+		CommentDto firstDto = new CommentDto(
+			firstComment.getId(),
+			articleId,
+			commentAuthor.getId(),
+			commentAuthor.getNickname(),
+			firstComment.getContent(),
+			1L,
+			false,
+			firstCreated
+		);
+
+		CommentDto secondDto = new CommentDto(
+			secondComment.getId(),
+			articleId,
+			commentAuthor.getId(),
+			commentAuthor.getNickname(),
+			secondComment.getContent(),
+			0L,
+			false,
+			secondCreated
+		);
+
+		given(articleRepository.findById(articleId)).willReturn(Optional.of(article));
+		given(commentRepository.findByArticleAndDeletedAtIsNullOrderByCreatedAtDesc(
+			eq(article), any(Pageable.class))).willReturn(commentSlice);
+		given(userRepository.findById(requestUserId)).willReturn(Optional.of(requestUser));
+		given(commentLikeRepository.existsByCommentAndUser(firstComment, requestUser)).willReturn(false);
+		given(commentLikeRepository.existsByCommentAndUser(secondComment, requestUser)).willReturn(false);
+		given(commentMapper.toDto(firstComment, "author", false)).willReturn(firstDto);
+		given(commentMapper.toDto(secondComment, "author", false)).willReturn(secondDto);
+		given(pageResponseMapper.toCursorPageResponse(any(), any(), any(), anyLong()))
+			.willAnswer(invocation -> {
+				Slice<CommentDto> slice = invocation.getArgument(0);
+				assertThat(invocation.getArgument(1, String.class)).isEqualTo(secondCreated.toString());
+				assertThat(invocation.getArgument(2, String.class)).isEqualTo(secondCreated.toString());
+				Number totalElements = invocation.getArgument(3, Number.class);
+				return CursorPageResponse.<CommentDto>builder()
+					.content(slice.getContent())
+					.nextCursor(invocation.getArgument(1, String.class))
+					.nextAfter(invocation.getArgument(2, String.class))
+					.size(slice.getNumberOfElements())
+					.totalElements(totalElements.longValue())
+					.hasNext(slice.hasNext())
+					.build();
+			});
+
+		CursorPageResponse<CommentDto> response = commentService.getComments(request);
+
+		assertThat(response.nextCursor()).isEqualTo(secondCreated.toString());
+		assertThat(response.nextAfter()).isEqualTo(secondCreated.toString());
+		verify(commentRepository).findByArticleAndDeletedAtIsNullOrderByCreatedAtDesc(
+			article, PageRequest.of(0, request.limit() + 1));
+	}
+
+	@Test
+	@DisplayName("조회 결과가 없으면 커서를 반환하지 않는다")
+	@SuppressWarnings("unchecked")
+	void getCommentsReturnsEmptyCursorWhenSliceEmpty() {
+		UUID articleId = UUID.randomUUID();
+		UUID requestUserId = UUID.randomUUID();
+		String cursorValue = "1_2024-06-01T00:00:00Z";
+		Instant likeCursorCreatedAt = Instant.parse("2024-06-01T00:00:00Z");
+		CommentSearchRequest request = new CommentSearchRequest(
+			articleId,
+			"likeCount",
+			Order.ASC,
+			cursorValue,
+			null,
+			3,
+			requestUserId
+		);
+
+		Article article = buildArticle(articleId);
+		User requestUser = buildUser(requestUserId, "viewer");
+
+		Slice<Comment> emptySlice = new SliceImpl<>(
+			List.of(),
+			Pageable.ofSize(request.limit() + 1),
+			false
+		);
+
+		given(articleRepository.findById(articleId)).willReturn(Optional.of(article));
+		given(commentRepository.findByArticleAndNotDeletedOrderByLikesAsc(
+			eq(article), any(), any(), any(Pageable.class))).willReturn(emptySlice);
+		given(userRepository.findById(requestUserId)).willReturn(Optional.of(requestUser));
+		given(pageResponseMapper.toCursorPageResponse(any(), any(), any(), anyLong()))
+			.willAnswer(invocation -> {
+				assertThat(invocation.getArgument(1, String.class)).isNull();
+				assertThat(invocation.getArgument(2, String.class)).isNull();
+				Number totalElements = invocation.getArgument(3, Number.class);
+				return CursorPageResponse.<CommentDto>builder()
+					.content(List.of())
+					.nextCursor(null)
+					.nextAfter(null)
+					.size(0)
+					.totalElements(totalElements.longValue())
+					.hasNext(false)
+					.build();
+			});
+
+		CursorPageResponse<CommentDto> response = commentService.getComments(request);
+
+		assertThat(response.nextCursor()).isNull();
+		assertThat(response.nextAfter()).isNull();
+		assertThat(response.hasNext()).isFalse();
+		verify(commentRepository).findByArticleAndNotDeletedOrderByLikesAsc(
+			article, 1L, likeCursorCreatedAt, PageRequest.of(0, request.limit() + 1));
 	}
 
 	private Article buildArticle(UUID articleId) {
