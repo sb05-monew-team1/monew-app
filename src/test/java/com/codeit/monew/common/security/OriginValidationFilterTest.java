@@ -56,4 +56,64 @@ class OriginValidationFilterTest {
 		assertThat(response.getStatus()).isEqualTo(200);
 		assertThat(filterChain.getRequest()).isNotNull();
 	}
+
+	@Test
+	void postRequestWithSameOriginIsAllowed() throws ServletException, IOException {
+		OriginValidationFilter filter = new OriginValidationFilter(Set.of());
+		MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/users/123");
+		request.setScheme("http");
+		request.setServerName("localhost");
+		request.setServerPort(80);
+		request.addHeader("Origin", "http://localhost");
+		MockHttpServletResponse response = new MockHttpServletResponse();
+		MockFilterChain filterChain = new MockFilterChain();
+
+		filter.doFilterInternal(request, response, filterChain);
+
+		assertThat(response.getStatus()).isEqualTo(200);
+		assertThat(filterChain.getRequest()).isNotNull();
+	}
+
+	@Test
+	void postRequestUsesRefererWhenOriginMissing() throws ServletException, IOException {
+		OriginValidationFilter filter = new OriginValidationFilter(Set.of());
+		MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/users/123");
+		request.addHeader("Referer", "https://evil.com/form");
+		MockHttpServletResponse response = new MockHttpServletResponse();
+		MockFilterChain filterChain = new MockFilterChain();
+
+		filter.doFilterInternal(request, response, filterChain);
+
+		assertThat(response.getStatus()).isEqualTo(403);
+		assertThat(filterChain.getRequest()).isNull();
+	}
+
+	@Test
+	@SuppressWarnings("HttpUrlsUsage")
+	void getRequestSkipsValidation() throws ServletException, IOException {
+		OriginValidationFilter filter = new OriginValidationFilter(Set.of());
+		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/users/123");
+		request.addHeader("Origin", "https://evil.com");
+		MockHttpServletResponse response = new MockHttpServletResponse();
+		MockFilterChain filterChain = new MockFilterChain();
+
+		filter.doFilterInternal(request, response, filterChain);
+
+		assertThat(response.getStatus()).isEqualTo(200);
+		assertThat(filterChain.getRequest()).isNotNull();
+	}
+
+	@Test
+	void invalidRefererIsIgnored() throws ServletException, IOException {
+		OriginValidationFilter filter = new OriginValidationFilter(Set.of());
+		MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/users/123");
+		request.addHeader("Referer", "::::");
+		MockHttpServletResponse response = new MockHttpServletResponse();
+		MockFilterChain filterChain = new MockFilterChain();
+
+		filter.doFilterInternal(request, response, filterChain);
+
+		assertThat(response.getStatus()).isEqualTo(200);
+		assertThat(filterChain.getRequest()).isNotNull();
+	}
 }
