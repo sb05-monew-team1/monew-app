@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.codeit.monew.comment.dto.CommentDto;
-import com.codeit.monew.comment.dto.CommentLikeRequest;
 import com.codeit.monew.comment.dto.CommentRegisterRequest;
 import com.codeit.monew.comment.dto.CommentSearchRequest;
 import com.codeit.monew.comment.dto.CommentUpdateRequest;
@@ -94,31 +93,30 @@ public class CommentController {
 	/**
 	 * 댓글 좋아요 등록
 	 * @param commentId 댓글 ID
-	 * @param request 좋아요 등록 요청 (userId 포함)
+	 * @param userId 요청자 ID (헤더)
+	 * @return 생성된 좋아요 정보
 	 */
 	@PostMapping("/{commentId}/comment-likes")
-	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public void likeComment(
+	public CommentDto likeComment(
 		@PathVariable UUID commentId,
-		@Validated @RequestBody CommentLikeRequest request
+		@RequestHeader("Monew-Request-User-ID") UUID userId
 	) {
-		log.info("댓글 좋아요 등록 API 호출 - commentId: {}, userId: {}", commentId, request.userId());
-		commentService.likeComment(commentId, request.userId());
+		log.info("댓글 좋아요 등록 API 호출 - commentId: {}, userId: {}", commentId, userId);
+		return commentService.likeComment(commentId, userId);
 	}
 
 	/**
 	 * 댓글 좋아요 취소
 	 * @param commentId 댓글 ID
-	 * @param request 좋아요 취소 요청 (userId 포함)
+	 * @param userId 요청자 ID (헤더)
 	 */
 	@DeleteMapping("/{commentId}/comment-likes")
-	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void unlikeComment(
 		@PathVariable UUID commentId,
-		@Validated @RequestBody CommentLikeRequest request
+		@RequestHeader("Monew-Request-User-ID") UUID userId
 	) {
-		log.info("댓글 좋아요 취소 API 호출 - commentId: {}, userId: {}", commentId, request.userId());
-		commentService.unlikeComment(commentId, request.userId());
+		log.info("댓글 좋아요 취소 API 호출 - commentId: {}, userId: {}", commentId, userId);
+		commentService.unlikeComment(commentId, userId);
 	}
 
 	/**
