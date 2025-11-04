@@ -15,6 +15,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -119,6 +120,11 @@ public class UserController {
 		//세션 타임아웃 설정(필요시)
 		//session.setMaxInactiveInterval(7200); //1시간 30분
 		return ResponseEntity.ok(userDto);
+	}
+
+	@GetMapping("/")
+	public String home() {
+		return "Monew API Server is running!";
 	}
 
   /*
