@@ -14,10 +14,13 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
@@ -272,32 +275,30 @@ public class ArticleService {
 			return List.of();
 		}
 
-		LinkedHashSet<String> keywords = new LinkedHashSet<>();
-		for (SubscriptionDto subscription : subscriptions) {
-			if (subscription == null) {
-				continue;
-			}
-			if (interestId != null && !interestId.equals(subscription.interestId())) {
-				continue;
-			}
-			if (subscription.interestKeywords() == null) {
-				continue;
-			}
-			for (String keyword : subscription.interestKeywords()) {
-				if (keyword == null || keyword.isBlank()) {
-					continue;
-				}
-				keywords.add(keyword);
-			}
-		}
+		LinkedHashSet<String> distinctKeywords = subscriptions.stream()
+			.filter(Objects::nonNull)
+			.filter(subscription -> matchesInterest(subscription, interestId))
+			.flatMap(this::keywordStream)
+			.map(String::trim)
+			.filter(keyword -> !keyword.isEmpty())
+			.collect(Collectors.toCollection(LinkedHashSet::new));
 
-		if (keywords.isEmpty()) {
+		if (distinctKeywords.isEmpty()) {
 			return List.of();
 		}
 
-		List<String> sortedKeywords = new ArrayList<>(keywords);
-		sortedKeywords.sort(Comparator.comparingInt(String::length).reversed());
-		return List.copyOf(sortedKeywords);
+		return distinctKeywords.stream()
+			.sorted(Comparator.comparingInt(String::length).reversed())
+			.toList();
+	}
+
+	private boolean matchesInterest(SubscriptionDto subscription, UUID interestId) {
+		return interestId == null || interestId.equals(subscription.interestId());
+	}
+
+	private Stream<String> keywordStream(SubscriptionDto subscription) {
+		List<String> keywords = subscription.interestKeywords();
+		return keywords == null ? Stream.empty() : keywords.stream();
 	}
 
 	private Slice<ArticleDto> highlightArticles(Slice<ArticleDto> slice, List<String> keywords) {
@@ -355,12 +356,10 @@ public class ArticleService {
 		StringBuilder sb = new StringBuilder();
 
 		while (matcher.find()) {
-			if (isWithinExistingBold(matcher.start(), text)) {
-				matcher.appendReplacement(sb, Matcher.quoteReplacement(matcher.group()));
-				continue;
+			String replacement = matcher.group();
+			if (!isWithinExistingBold(matcher.start(), text)) {
+				replacement = "<b>" + replacement + "</b>";
 			}
-			String matchedText = matcher.group();
-			String replacement = "<b>" + matchedText + "</b>";
 			matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
 		}
 		matcher.appendTail(sb);

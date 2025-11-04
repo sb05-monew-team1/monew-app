@@ -5,6 +5,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -113,6 +115,45 @@ public class ArticleServiceTest {
 			assertThat(result).isEqualTo(expected);
 
 		}
+
+		@Test
+		@DisplayName("이미 강조된 텍스트는 중복으로 감싸지지 않는다")
+		void highlightSkipsExistingBold() {
+			UUID articleId = UUID.randomUUID();
+			UUID userId = UUID.randomUUID();
+			Instant date = Instant.now();
+			ArticleDto articleDto = new ArticleDto(
+				articleId,
+				ArticleSource.NAVER,
+				"url",
+				"<b>금리</b> 동향과 금리 전망",
+				date,
+				"<strong>금리</strong> 정책과 금리 분석",
+				10L,
+				5L,
+				false
+			);
+			Article article = new Article();
+			SubscriptionDto subscriptionDto = new SubscriptionDto(
+				UUID.randomUUID(),
+				UUID.randomUUID(),
+				"금리",
+				List.of("금리"),
+				500L,
+				Instant.now()
+			);
+
+			given(articleRepository.findById(articleId)).willReturn(Optional.of(article));
+			given(userRepository.findById(userId)).willReturn(Optional.ofNullable(User.builder().build()));
+			given(articleViewRepository.existsByUserIdAndArticleId(userId, articleId)).willReturn(false);
+			given(articleMapper.toArticleDto(article, false)).willReturn(articleDto);
+			given(interestSubscriptionRepository.searchSubsCription(userId)).willReturn(List.of(subscriptionDto));
+
+			ArticleDto result = articleService.search(articleId, userId);
+
+			assertThat(result.title()).isEqualTo("<b>금리</b> 동향과 <b>금리</b> 전망");
+			assertThat(result.summary()).isEqualTo("<strong>금리</strong> 정책과 <b>금리</b> 분석");
+		}
 	}
 
 	@Nested
@@ -206,6 +247,87 @@ public class ArticleServiceTest {
 			ArticleDto highlighted = response.content().get(0);
 			assertThat(highlighted.title()).isEqualTo("미국 <b>주식</b> 시장과 금융 동향");
 			assertThat(highlighted.summary()).isEqualTo("해외 <b>주식</b> 투자와 금융 이슈 정리");
+		}
+
+		@Test
+		@DisplayName("긴 키워드를 먼저 강조하고 중복 키워드를 제거한다")
+		void highlightPrioritisesLongerKeywords() {
+			UUID userId = UUID.randomUUID();
+
+			ArticleSearchRequest request = new ArticleSearchRequest(
+				null,
+				null,
+				List.of(),
+				null,
+				null,
+				"publishDate",
+				Order.ASC,
+				null,
+				null,
+				5,
+				userId
+			);
+
+			ArticleDto articleDto = new ArticleDto(
+				UUID.randomUUID(),
+				ArticleSource.NAVER,
+				"url",
+				"국내 주식 시장 리포트",
+				Instant.now(),
+				"주식과 주 전망",
+				0L,
+				0L,
+				false
+			);
+
+			Slice<ArticleDto> articleSlice = new SliceImpl<>(List.of(articleDto), Pageable.ofSize(5), false);
+			ArticleSearchResultDto searchResult = new ArticleSearchResultDto(articleSlice, null);
+
+			SubscriptionDto primary = new SubscriptionDto(
+				UUID.randomUUID(),
+				UUID.randomUUID(),
+				"투자",
+				Arrays.asList(" 주식", "주", "주식"),
+				300L,
+				Instant.now()
+			);
+			SubscriptionDto emptyKeywords = new SubscriptionDto(
+				UUID.randomUUID(),
+				UUID.randomUUID(),
+				"기본",
+				null,
+				200L,
+				Instant.now()
+			);
+
+			given(userRepository.findById(userId)).willReturn(Optional.ofNullable(User.builder()
+				.email("another@example.com")
+				.nickname("tester")
+				.password("secret")
+				.build()));
+			given(articleRepository.search(any())).willReturn(searchResult);
+			given(articleRepository.count()).willReturn(1L);
+			given(interestSubscriptionRepository.searchSubsCription(userId))
+				.willReturn(new ArrayList<>(Arrays.asList(primary, null, emptyKeywords)));
+			given(pageResponseMapper.toCursorPageResponse(any(), any(), any(), anyLong()))
+				.willAnswer(invocation -> {
+					Slice<ArticleDto> highlighted = invocation.getArgument(0);
+					return CursorPageResponse.<ArticleDto>builder()
+						.content(highlighted.getContent())
+						.nextCursor(invocation.getArgument(1))
+						.nextAfter(invocation.getArgument(2))
+						.size(highlighted.getNumberOfElements())
+						.totalElements(invocation.getArgument(3))
+						.hasNext(highlighted.hasNext())
+						.build();
+				});
+
+			CursorPageResponse<ArticleDto> response = articleService.search(request);
+
+			assertThat(response.content()).hasSize(1);
+			ArticleDto highlighted = response.content().get(0);
+			assertThat(highlighted.title()).isEqualTo("국내 <b>주식</b> 시장 리포트");
+			assertThat(highlighted.summary()).isEqualTo("<b>주식</b>과 <b>주</b> 전망");
 		}
 	}
 
