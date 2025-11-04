@@ -32,7 +32,7 @@ public record ArticleSearchRequest(
 	@NotNull(message = "페이지 크기를 입력 해 주세요.")
 	Integer limit,
 
-	UUID monewRequestUserId
+	UUID userId
 ) {
 
 	public static ArticleSearchRequest filter(ArticleSearchRequest r, UUID monewRequestUserId) {

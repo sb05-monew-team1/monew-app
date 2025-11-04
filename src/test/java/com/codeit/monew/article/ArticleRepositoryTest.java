@@ -3,6 +3,9 @@ package com.codeit.monew.article;
 import static org.assertj.core.api.Assertions.*;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -104,7 +107,9 @@ public class ArticleRepositoryTest {
 
 		ArticleDto lastOfFirstPage = firstPage.getContent().get(2);
 		String cursor = String.valueOf(lastOfFirstPage.commentCount());
-		Instant after = lastOfFirstPage.publishDate();
+		Instant after = articleRepository.findById(lastOfFirstPage.id())
+			.orElseThrow()
+			.getCreatedAt();
 
 		ArticleSearchRequest secondPageRequest = new ArticleSearchRequest(
 			null,
@@ -135,6 +140,82 @@ public class ArticleRepositoryTest {
 			.extracting(ArticleDto::commentCount)
 			.containsExactly(3L, 2L, 2L);
 		assertThat(secondPage.getContent().get(0).viewedByMe()).isTrue();
+	}
+
+	@Test
+	void searchAppliesAllFilters() {
+		UUID sportsInterest = uuid("cccc1111-0000-0000-0000-000000000003");
+		ArticleSearchRequest request = new ArticleSearchRequest(
+			"플레이오프",
+			sportsInterest,
+			List.of("CHOSUN"),
+			LocalDateTime.of(2024, 3, 6, 0, 0),
+			LocalDateTime.of(2024, 3, 7, 23, 59),
+			"publishDate",
+			Order.DESC,
+			null,
+			null,
+			5,
+			USER_1
+		);
+
+		Slice<ArticleDto> slice = articleRepository.search(ArticleSearchRequestFromService.from(request)).slice();
+
+		assertThat(slice.hasNext()).isFalse();
+		assertThat(slice.getContent()).hasSize(1);
+		assertThat(slice.getContent())
+			.extracting(ArticleDto::id)
+			.containsExactly(uuid("10000000-0000-0000-0000-00000000000c"));
+	}
+
+	@Test
+	void searchOrdersByViewCountAscAndAppliesCursor() {
+		ArticleSearchRequest firstPageRequest = new ArticleSearchRequest(
+			null,
+			null,
+			null,
+			null,
+			null,
+			"viewCount",
+			Order.ASC,
+			null,
+			null,
+			4,
+			USER_1
+		);
+
+		Slice<ArticleDto> firstPage = articleRepository.search(ArticleSearchRequestFromService.from(firstPageRequest))
+			.slice();
+
+		assertThat(firstPage.hasNext()).isTrue();
+		assertThat(firstPage.getContent()).isSortedAccordingTo(Comparator.comparingLong(ArticleDto::viewCount));
+
+		ArticleDto lastOfFirst = firstPage.getContent().get(firstPage.getNumberOfElements() - 1);
+		String cursor = String.valueOf(lastOfFirst.viewCount());
+		Instant after = articleRepository.findById(lastOfFirst.id())
+			.orElseThrow()
+			.getCreatedAt();
+
+		ArticleSearchRequest secondPageRequest = new ArticleSearchRequest(
+			null,
+			null,
+			null,
+			null,
+			null,
+			"viewCount",
+			Order.ASC,
+			cursor,
+			after,
+			4,
+			USER_1
+		);
+
+		Slice<ArticleDto> secondPage = articleRepository.search(ArticleSearchRequestFromService.from(secondPageRequest))
+			.slice();
+
+		assertThat(secondPage.getContent()).isSortedAccordingTo(Comparator.comparingLong(ArticleDto::viewCount));
+		assertThat(secondPage.getContent())
+			.allMatch(article -> article.viewCount() >= lastOfFirst.viewCount());
 	}
 
 	private static UUID uuid(String value) {

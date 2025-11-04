@@ -3,8 +3,10 @@
 
     <conversionRule conversionWord="clr" class="org.springframework.boot.logging.logback.ColorConverter"/>
 
-    <property name="CONSOLE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{requestId}] [%X{ip}] %clr(%-5level) [%thread] %logger{36} - %msg%n"/>
-    <property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{requestId}] [%X{ip}] %-5level [%thread] %logger{36} - %msg%n"/>
+    <property name="CONSOLE_LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{requestId}] [%X{ip}] %clr(%-5level) [%thread] %logger{36} - %msg%n"/>
+    <property name="FILE_LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{requestId}] [%X{ip}] %-5level [%thread] %logger{36} - %msg%n"/>
     <property name="LOG_FILE_PATH" value=".logs"/>
     <property name="LOG_FILE_NAME" value="application"/>
 

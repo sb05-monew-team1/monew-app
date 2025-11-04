@@ -44,7 +44,8 @@ public class NotificationController {
 	}
 
 	@PatchMapping
-	public ResponseEntity<Void> checkAllNotifications(@RequestHeader("Monew-Request-User-ID") String monewRequestUserId) {
+	public ResponseEntity<Void> checkAllNotifications(
+		@RequestHeader("Monew-Request-User-ID") String monewRequestUserId) {
 		log.info("PATCH /api/notifications");
 
 		notificationService.checkAllNotifications(monewRequestUserId);

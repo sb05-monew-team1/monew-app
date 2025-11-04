@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import org.springframework.stereotype.Repository;
+
 import com.codeit.monew.notification.domain.QNotification;
 import com.codeit.monew.notification.dto.NotificationDto;
 import com.codeit.monew.user.domain.QUser;
@@ -65,7 +66,7 @@ public class NotificationQueryRepositoryImpl implements NotificationQueryReposit
 			.limit(limit + 1L)
 			.fetch();
 
-		boolean hasNext= rowsPlusOne.size() > limit;
+		boolean hasNext = rowsPlusOne.size() > limit;
 		List<NotificationDto> content = hasNext ? rowsPlusOne.subList(0, limit) : rowsPlusOne;
 
 		Pageable pageable = Pageable.ofSize(limit);
@@ -73,7 +74,7 @@ public class NotificationQueryRepositoryImpl implements NotificationQueryReposit
 	}
 
 	@Override
-	public long countUnConfirmed(String  monewRequestUserId) {
+	public long countUnConfirmed(String monewRequestUserId) {
 		BooleanBuilder builder = new BooleanBuilder();
 		builder.and(n.confirmed.eq(false));
 		if (monewRequestUserId != null && !monewRequestUserId.isBlank()) {
