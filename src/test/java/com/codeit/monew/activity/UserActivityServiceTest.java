@@ -1,6 +1,11 @@
 package com.codeit.monew.activity;
 
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.BDDMockito.*;
+
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
@@ -8,7 +13,10 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.ActiveProfiles;
 
+import com.codeit.monew.activity.domain.UserActivity;
 import com.codeit.monew.activity.dto.UserActivityDto;
 import com.codeit.monew.activity.service.UserActivityService;
 import com.codeit.monew.article.dto.ArticleViewDto;
@@ -19,8 +27,10 @@ import com.codeit.monew.comment.repository.CommentLikeRepository;
 import com.codeit.monew.comment.repository.CommentRepository;
 import com.codeit.monew.interest.dto.SubscriptionDto;
 import com.codeit.monew.interest.repository.InterestSubscriptionRepository;
+import com.codeit.monew.activity.repository.UserActivityRepository;
 
 @SpringBootTest
+@ActiveProfiles("test")
 public class UserActivityServiceTest {
 	@Autowired
 	private InterestSubscriptionRepository interestSubsRepository;
@@ -32,6 +42,8 @@ public class UserActivityServiceTest {
 	private ArticleViewRepository articleViewRepository;
 	@Autowired
 	private UserActivityService userActivityService;
+	@MockBean
+	private UserActivityRepository userActivityRepository;
 
 	@Nested
 	class userActivityFieldListTest {
@@ -41,8 +53,9 @@ public class UserActivityServiceTest {
 			UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
 			List<SubscriptionDto> subscriptions = interestSubsRepository.searchSubsCription(userId);
 
-			System.out.println("구독한 관심사 정보: ");
-			subscriptions.forEach(System.out::println);
+			assertThat(subscriptions).hasSize(1);
+			assertThat(subscriptions.get(0).interestName()).isEqualTo("Finance");
+			assertThat(subscriptions.get(0).interestKeywords()).containsExactlyInAnyOrder("금융", "주식");
 		}
 
 		@Test
@@ -50,8 +63,9 @@ public class UserActivityServiceTest {
 		public void searchCommentsTest() {
 			UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
 			List<CommentActivityDto> comments = commentRepository.searchRecentComments(userId);
-			System.out.println("최근 작성 댓글: ");
-			comments.forEach(System.out::println);
+
+			assertThat(comments).isNotEmpty();
+			assertThat(comments.get(0).content()).isEqualTo("반도체 업황이 회복 중이군요.");
 		}
 
 		@Test
@@ -59,8 +73,9 @@ public class UserActivityServiceTest {
 		public void searchCommentLikesTest() {
 			UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
 			List<CommentLikeActivityDto> commentLikes = commentLikeRepository.searchRecentCommentLikes(userId);
-			System.out.println("최근 좋아요 누른 댓글: ");
-			commentLikes.forEach(System.out::println);
+
+			assertThat(commentLikes).isNotEmpty();
+			assertThat(commentLikes.get(0).commentLikeCount()).isGreaterThanOrEqualTo(0);
 		}
 
 		@Test
@@ -68,8 +83,9 @@ public class UserActivityServiceTest {
 		public void searchArticleViewsTest() {
 			UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
 			List<ArticleViewDto> articleViews = articleViewRepository.searchRecentArticleViews(userId);
-			System.out.println("최근 본 뉴스 기사: ");
-			articleViews.forEach(System.out::println);
+
+			assertThat(articleViews).isNotEmpty();
+			assertThat(articleViews.get(0).articleTitle()).isNotBlank();
 		}
 	}
 
@@ -79,26 +95,51 @@ public class UserActivityServiceTest {
 		@DisplayName("유저 활동 목록 첫 조회")
 		public void createUserActivityTest() {
 			UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+
+			given(userActivityRepository.existsById(userId)).willReturn(false);
+
 			UserActivityDto userActivity = userActivityService.getUserActivityInfo(userId);
-			System.out.println("유저 활동 조회 : " + userActivity.toString());
+
+			assertThat(userActivity.id()).isEqualTo(userId);
+			verify(userActivityRepository).save(any(UserActivity.class));
 		}
 
 		@Test
 		@DisplayName("유저 활동 목록 mongoDB에서 조회")
 		public void searchUserActivityMongoDBTest() {
-			System.out.println("createUserActivityTest를 통해 이미 db에 저장되었다고 가정(디버깅을 통해 확인).");
 			UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+
+			UserActivity persisted = UserActivity.builder()
+				.id(userId)
+				.email("user1@monew.test")
+				.nickname("user1")
+				.createdAt(Instant.parse("2024-03-06T09:00:00Z"))
+				.subscriptions(List.of())
+				.comments(List.of())
+				.commentLikes(List.of())
+				.articleViews(List.of())
+				.build();
+
+			given(userActivityRepository.existsById(userId)).willReturn(true);
+			given(userActivityRepository.findById(userId)).willReturn(Optional.of(persisted));
+
 			UserActivityDto userActivity = userActivityService.getUserActivityInfo(userId);
-			System.out.println("유저 활동 조회(from mongodb) : " + userActivity.toString());
+
+			assertThat(userActivity.nickname()).isEqualTo("user1");
+			verify(userActivityRepository, never()).save(any());
 		}
 	}
 
 	@Test
 	@DisplayName("mongodb에서 삭제하는 테스트")
 	public void deleteUserActivityMongoDBTest() {
-		System.out.println("삭제: ");
 		UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+
+		given(userActivityRepository.existsById(userId)).willReturn(true);
+
 		userActivityService.deleteUserActivity(userId);
+
+		verify(userActivityRepository).deleteById(userId);
 	}
 
 }

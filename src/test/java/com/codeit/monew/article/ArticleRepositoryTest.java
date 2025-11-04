@@ -104,7 +104,9 @@ public class ArticleRepositoryTest {
 
 		ArticleDto lastOfFirstPage = firstPage.getContent().get(2);
 		String cursor = String.valueOf(lastOfFirstPage.commentCount());
-		Instant after = lastOfFirstPage.publishDate();
+		Instant after = articleRepository.findById(lastOfFirstPage.id())
+			.orElseThrow()
+			.getCreatedAt();
 
 		ArticleSearchRequest secondPageRequest = new ArticleSearchRequest(
 			null,
