@@ -25,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 
+import com.codeit.monew.activity.service.UserActivityService;
 import com.codeit.monew.common.dto.CursorPageResponse;
 import com.codeit.monew.common.exception.BusinessException;
 import com.codeit.monew.common.exception.ErrorCode;
@@ -61,6 +62,9 @@ class InterestServiceTest {
 
 	@Mock
 	private UserRepository userRepository;
+
+	@Mock
+	private UserActivityService userActivityService;
 
 	@InjectMocks
 	private InterestService interestService;
