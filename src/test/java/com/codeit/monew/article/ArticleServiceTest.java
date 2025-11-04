@@ -16,16 +16,30 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 
 import com.codeit.monew.article.domain.Article;
 import com.codeit.monew.article.domain.ArticleSource;
 import com.codeit.monew.article.dto.ArticleDto;
+import com.codeit.monew.article.dto.ArticleSearchRequest;
+import com.codeit.monew.article.dto.ArticleSearchResultDto;
 import com.codeit.monew.article.mapper.ArticleMapper;
 import com.codeit.monew.article.repository.ArticleRepository;
 import com.codeit.monew.article.repository.ArticleViewRepository;
 import com.codeit.monew.article.service.ArticleService;
+import com.codeit.monew.article.service.ArticleStorage;
+import com.codeit.monew.common.dto.CursorPageResponse;
+import com.codeit.monew.common.util.PageResponseMapper;
+import com.codeit.monew.activity.service.UserActivityService;
 import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.repository.UserRepository;
+import com.codeit.monew.interest.dto.SubscriptionDto;
+import com.codeit.monew.interest.repository.InterestSubscriptionRepository;
+import com.querydsl.core.types.Order;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.codeit.monew.article.mapper.ArticleViewMapper;
 
 @ExtendWith(MockitoExtension.class)
 public class ArticleServiceTest {
@@ -42,6 +56,12 @@ public class ArticleServiceTest {
 	@Mock
 	private ArticleViewRepository articleViewRepository;
 
+	@Mock
+	private InterestSubscriptionRepository interestSubscriptionRepository;
+
+	@Mock
+	private PageResponseMapper pageResponseMapper;
+
 	@InjectMocks
 	private ArticleService articleService;
 
@@ -57,24 +77,139 @@ public class ArticleServiceTest {
 				articleId,
 				ArticleSource.NAVER,
 				"url",
-				"title",
+				"금리 인상 뉴스",
 				date,
-				"summary",
+				"금리와 물가 뉴스",
 				100L,
 				10L,
 				true
 			);
 			Article article = new Article();
+			SubscriptionDto subscriptionDto = new SubscriptionDto(
+				UUID.randomUUID(),
+				UUID.randomUUID(),
+				"금리",
+				List.of("금리", "뉴스"),
+				1000L,
+				Instant.now()
+			);
 
 			given(articleRepository.findById(any())).willReturn(Optional.of(article));
 			given(userRepository.findById(any())).willReturn(Optional.ofNullable(User.builder().build()));
 			given(articleViewRepository.existsByUserIdAndArticleId(any(), any())).willReturn(true);
 			given(articleMapper.toArticleDto(any(), eq(true))).willReturn(articleDto);
+			given(interestSubscriptionRepository.searchSubsCription(any())).willReturn(List.of(subscriptionDto));
 
 			ArticleDto result = articleService.search(articleId, userId);
 
-			assertThat(result).isEqualTo(articleDto);
+			ArticleDto expected = new ArticleDto(
+				articleId,
+				ArticleSource.NAVER,
+				"url",
+				"<b>금리</b> 인상 <b>뉴스</b>",
+				date,
+				"<b>금리</b>와 물가 <b>뉴스</b>",
+				100L,
+				10L,
+				true
+			);
 
+			assertThat(result).isEqualTo(expected);
+
+		}
+	}
+
+	@Nested
+	class SearchArticles {
+		@Test
+		@DisplayName("관심사 선택 시 해당 관심사 키워드만 강조")
+		void highlightOnlySelectedInterestKeywords() {
+			UUID userId = UUID.randomUUID();
+			UUID targetInterestId = UUID.randomUUID();
+			UUID otherInterestId = UUID.randomUUID();
+
+			ArticleSearchRequest request = new ArticleSearchRequest(
+				null,
+				targetInterestId,
+				List.of(),
+				null,
+				null,
+				"publishDate",
+				Order.DESC,
+				null,
+				null,
+				10,
+				userId
+			);
+
+			ArticleDto articleDto = new ArticleDto(
+				UUID.randomUUID(),
+				ArticleSource.NAVER,
+				"url",
+				"미국 주식 시장과 금융 동향",
+				Instant.now(),
+				"해외 주식 투자와 금융 이슈 정리",
+				0L,
+				0L,
+				false
+			);
+
+			Slice<ArticleDto> articleSlice = new SliceImpl<>(List.of(articleDto), Pageable.ofSize(10), false);
+			ArticleSearchResultDto searchResult = new ArticleSearchResultDto(articleSlice, null);
+
+			SubscriptionDto targetSubscription = new SubscriptionDto(
+				UUID.randomUUID(),
+				targetInterestId,
+				"주식",
+				List.of("주식"),
+				1_000L,
+				Instant.now()
+			);
+
+			SubscriptionDto otherSubscription = new SubscriptionDto(
+				UUID.randomUUID(),
+				otherInterestId,
+				"금융",
+				List.of("금융"),
+				2_000L,
+				Instant.now()
+			);
+
+			given(userRepository.findById(userId)).willReturn(Optional.ofNullable(User.builder()
+				.email("test@example.com")
+				.nickname("tester")
+				.password("secret")
+				.build()));
+			given(articleRepository.search(any())).willReturn(searchResult);
+			given(articleRepository.count()).willReturn(1L);
+			given(interestSubscriptionRepository.searchSubsCription(userId))
+				.willReturn(List.of(targetSubscription, otherSubscription));
+			given(pageResponseMapper.toCursorPageResponse(any(), any(), any(), anyLong()))
+				.willAnswer(invocation -> {
+					Slice<ArticleDto> highlighted = invocation.getArgument(0);
+					assertThat(highlighted.getContent()).hasSize(1);
+					ArticleDto highlightedArticle = highlighted.getContent().get(0);
+					assertThat(highlightedArticle.title()).contains("<b>주식</b>");
+					assertThat(highlightedArticle.title()).doesNotContain("<b>금융</b>");
+					assertThat(highlightedArticle.summary()).contains("<b>주식</b>");
+					assertThat(highlightedArticle.summary()).doesNotContain("<b>금융</b>");
+
+					return CursorPageResponse.<ArticleDto>builder()
+						.content(highlighted.getContent())
+						.nextCursor(null)
+						.nextAfter(null)
+						.size(highlighted.getSize())
+						.totalElements(1L)
+						.hasNext(highlighted.hasNext())
+						.build();
+				});
+
+			CursorPageResponse<ArticleDto> response = articleService.search(request);
+
+			assertThat(response.content()).hasSize(1);
+			ArticleDto highlighted = response.content().get(0);
+			assertThat(highlighted.title()).isEqualTo("미국 <b>주식</b> 시장과 금융 동향");
+			assertThat(highlighted.summary()).isEqualTo("해외 <b>주식</b> 투자와 금융 이슈 정리");
 		}
 	}
 

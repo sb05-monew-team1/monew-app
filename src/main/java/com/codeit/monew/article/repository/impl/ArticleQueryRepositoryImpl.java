@@ -114,7 +114,7 @@ public class ArticleQueryRepositoryImpl implements ArticleQueryRepository {
 			.selectOne()
 			.from(viewedArticleView)
 			.where(viewedArticleView.article.eq(a)
-				.and(viewedArticleView.user.id.eq(req.monewRequestUserId())))
+				.and(viewedArticleView.user.id.eq(req.userId())))
 			.exists();
 
 		int limit = req.limit();
