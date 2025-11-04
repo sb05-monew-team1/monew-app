@@ -54,6 +54,7 @@ public class CommentService {
 
 	/**
 	 * 댓글 등록
+	 *
 	 * @param request 댓글 등록 요청
 	 * @return 등록된 댓글 정보
 	 */
@@ -93,9 +94,10 @@ public class CommentService {
 
 	/**
 	 * 댓글 수정
-	 * @param commentId 댓글 ID
+	 *
+	 * @param commentId     댓글 ID
 	 * @param requestUserId 요청자 ID
-	 * @param request 댓글 수정 요청
+	 * @param request       댓글 수정 요청
 	 * @return 수정된 댓글 정보
 	 */
 	@Transactional
@@ -129,6 +131,7 @@ public class CommentService {
 
 	/**
 	 * 댓글 논리 삭제
+	 *
 	 * @param commentId 댓글 ID
 	 */
 	@Transactional
@@ -149,6 +152,7 @@ public class CommentService {
 
 	/**
 	 * 댓글 물리 삭제 (테스트용)
+	 *
 	 * @param commentId 댓글 ID
 	 */
 	@Transactional
@@ -168,11 +172,13 @@ public class CommentService {
 
 	/**
 	 * 댓글 좋아요 등록
+	 *
 	 * @param commentId 댓글 ID
-	 * @param userId 사용자 ID
+	 * @param userId    사용자 ID
+	 * @return 좋아요한 댓글 정보
 	 */
 	@Transactional
-	public void likeComment(UUID commentId, UUID userId) {
+	public CommentDto likeComment(UUID commentId, UUID userId) {
 		log.info("댓글 좋아요 등록 시작 - commentId: {}, userId: {}", commentId, userId);
 
 		// 댓글 조회
@@ -220,12 +226,15 @@ public class CommentService {
 		log.debug("사용자 활동 내역 mongoDB에서 삭제 - userId: {}", user.getId());
 		userActivityService.deleteUserActivity(user.getId());
 
+		// 좋아요한 댓글 정보 반환 (likedByMe = true)
+		return commentMapper.toDto(comment, comment.getUser().getNickname(), true);
 	}
 
 	/**
 	 * 댓글 좋아요 취소
+	 *
 	 * @param commentId 댓글 ID
-	 * @param userId 사용자 ID
+	 * @param userId    사용자 ID
 	 */
 	@Transactional
 	public void unlikeComment(UUID commentId, UUID userId) {
@@ -260,6 +269,7 @@ public class CommentService {
 
 	/**
 	 * 특정 기사의 댓글 목록 조회 (정렬 및 커서 페이지네이션)
+	 *
 	 * @param request 댓글 목록 조회 요청
 	 * @return 댓글 목록 (커서 페이지네이션 응답)
 	 */
@@ -335,10 +345,10 @@ public class CommentService {
 		if (commentDtoSlice.hasNext() && commentDtoSlice.getNumberOfElements() > 0) {
 			CommentDto lastComment = commentDtoSlice.getContent().get(commentDtoSlice.getNumberOfElements() - 1);
 
-			nextAfter = lastComment.createdAt().toString();
+			nextAfter = String.valueOf(lastComment.createdAt());
 			if (request.orderBy().equals("likeCount")) {
 				// 좋아요순: likeCount_createdAt 형식
-				nextCursor = lastComment.likeCount() + "_" + lastComment.createdAt().toString();
+				nextCursor = lastComment.likeCount() + "_" + lastComment.createdAt();
 			} else {
 				// 날짜순: createdAt만
 				nextCursor = nextAfter;

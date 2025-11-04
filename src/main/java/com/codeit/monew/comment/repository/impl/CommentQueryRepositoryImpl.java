@@ -1,6 +1,5 @@
 package com.codeit.monew.comment.repository.impl;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,7 +23,6 @@ public class CommentQueryRepositoryImpl implements CommentQueryRepository {
 	private static final QComment c = QComment.comment;
 	private static final QArticle a = QArticle.article;
 	private static final QUser u = QUser.user;
-
 
 	@Override
 	public List<CommentActivityDto> searchRecentComments(UUID userId) {
