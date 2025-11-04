@@ -1,10 +1,21 @@
 package com.codeit.monew.user.controller;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,14 +52,11 @@ public class UserController {
 	@PatchMapping("/{userId}")
 	public ResponseEntity<UserDto> updateUser(
 		//@RequestHeader("Monew-Request-User-ID") UUID requestUserId, //헤더추가
+		@AuthenticationPrincipal UserDto loggedInUser,
 		@PathVariable UUID userId,
-		@Valid @RequestBody UserUpdateRequest userUpdateRequest,
-		HttpSession session
+		@Valid @RequestBody UserUpdateRequest userUpdateRequest
+		//HttpSession session
 	) {
-		UserDto loggedInUser = (UserDto)session.getAttribute("loggedInUser");
-		if (loggedInUser == null) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-		}
 		UserDto updatedUser = userService.updateUserNickname(loggedInUser.id(), userId, userUpdateRequest);
 		return ResponseEntity.ok(updatedUser);
 	}
@@ -57,13 +65,10 @@ public class UserController {
 	@DeleteMapping("/{userId}")
 	public ResponseEntity<UserDto> deleteUser(
 		//@RequestHeader
-		@PathVariable UUID userId,
-		HttpSession session
+		@AuthenticationPrincipal UserDto loggedInUser,
+		@PathVariable UUID userId
+		//HttpSession session
 	) {
-		UserDto loggedInUser = (UserDto)session.getAttribute("loggedInUser");
-		if (loggedInUser == null) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-		}
 		userService.deleteUser(loggedInUser.id(), userId);
 		return ResponseEntity.noContent().build(); //204
 	}
@@ -72,16 +77,10 @@ public class UserController {
 	@DeleteMapping("/{userId}/hard")
 	public ResponseEntity<Void> hardDeleteUser(
 		//@RequestHeader("Monew-Request-User-ID") UUID requestUserId, //로깅,감사 등..
-		@PathVariable UUID userId,
-		HttpSession session
+		@AuthenticationPrincipal UserDto loggedInUser,
+		@PathVariable UUID userId
+		//HttpSession session
 	) {
-		UserDto loggedInUser = (UserDto)session.getAttribute("loggedInUser");
-		if (loggedInUser == null) {
-			//비로그인 접근 시도(2차방어)
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-		}
-
-		//반드시 admin만 호출할 수 있도록 SecurityConfig에서 강력한 권한 제어가 필요.
 		userService.hardDeleteUser(loggedInUser.id(), userId);
 		return ResponseEntity.noContent().build(); //204
 	}
@@ -93,12 +92,39 @@ public class UserController {
 		HttpSession session
 	) {
 		UserDto userDto = userService.loginUser(userLoginRequest);
+
+		//인증설정
+		//1. 권한 설정(기본 "role_user")
+		List<GrantedAuthority> authorities = new ArrayList<>();
+		authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+
+		//2. 객체 생성
+		Authentication authentication = new UsernamePasswordAuthenticationToken(
+			userDto, // Principal (로그인된 사용자 정보)
+			null,    // Credentials (비밀번호, 인증 후엔 null 처리)
+			authorities // Authorities (권한 목록)
+		);
+
+		// 1-3. SecurityContext 생성 및 Authentication 객체 저장
+		SecurityContext context = SecurityContextHolder.createEmptyContext();
+		context.setAuthentication(authentication);
+
+		// 4. SecurityContext를 HttpSession에 저장
+		//    이후 요청부터 Spring Security가 이 세션을 읽어 인증 여부를 판단합니다.
+		session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
+
 		//세션에 저장할 키 이름
-		final String USER_SESSION_KEY = "loggedInUser";
-		session.setAttribute(USER_SESSION_KEY, userDto);
+		//final String USER_SESSION_KEY = "loggedInUser";
+		//session.setAttribute(USER_SESSION_KEY, userDto);
+
 		//세션 타임아웃 설정(필요시)
 		//session.setMaxInactiveInterval(7200); //1시간 30분
 		return ResponseEntity.ok(userDto);
+	}
+
+	@GetMapping("/")
+	public String home() {
+		return "Monew API Server is running!";
 	}
 
   /*
