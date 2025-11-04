@@ -24,3 +24,9 @@ management:
 
 server:
   port: 8080 # app / 8081 # batch
+  servlet:
+    session:
+      cookie:
+        same-site: Strict
+        http-only: true
+        secure: true

@@ -21,14 +21,16 @@ public class SecurityConfig {
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception{
     http
-        .csrf(csrf -> csrf.disable())
+        .csrf(csrf -> csrf.disable()) // CSRF는 비활성화 유지 (대신 쿠키 설정으로 방어)
         .sessionManagement(session ->
-            session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            //STATELESS가 아닌, 세션을 사용하도록 명시
+            //IF_REQUIRED: 스프링 시큐리티가 필요시 세션을 생성 (로그인 시)
+            session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
         )
         .authorizeHttpRequests(authorize -> authorize
             .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
             .requestMatchers("/api/users/login").permitAll()
-            .anyRequest().permitAll()
+            .anyRequest().authenticated()
         );
     // (로그인/로그아웃 폼 비활성화)
     http.formLogin(form -> form.disable());
