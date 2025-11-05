@@ -30,4 +30,3 @@ server:
         same-site: Lax
         http-only: true
         secure: false
-        path=/:
