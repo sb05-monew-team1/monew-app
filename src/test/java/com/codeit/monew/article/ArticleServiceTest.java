@@ -3,14 +3,18 @@ package com.codeit.monew.article;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
+import static org.mockito.Mockito.never;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -22,15 +26,21 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 
+import com.codeit.monew.activity.service.UserActivityService;
 import com.codeit.monew.article.domain.Article;
 import com.codeit.monew.article.domain.ArticleSource;
+import com.codeit.monew.article.domain.ArticleView;
 import com.codeit.monew.article.dto.ArticleDto;
 import com.codeit.monew.article.dto.ArticleSearchRequest;
 import com.codeit.monew.article.dto.ArticleSearchResultDto;
+import com.codeit.monew.article.dto.ArticleViewDto;
+import com.codeit.monew.article.exception.ArticleViewAlreadyExistException;
 import com.codeit.monew.article.mapper.ArticleMapper;
+import com.codeit.monew.article.mapper.ArticleViewMapper;
 import com.codeit.monew.article.repository.ArticleRepository;
 import com.codeit.monew.article.repository.ArticleViewRepository;
 import com.codeit.monew.article.service.ArticleService;
+import com.codeit.monew.article.service.ArticleStorage;
 import com.codeit.monew.common.dto.CursorPageResponse;
 import com.codeit.monew.common.util.PageResponseMapper;
 import com.codeit.monew.interest.dto.SubscriptionDto;
@@ -38,6 +48,14 @@ import com.codeit.monew.interest.repository.InterestSubscriptionRepository;
 import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.repository.UserRepository;
 import com.querydsl.core.types.Order;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.MeterRegistry;
+
+import org.mockito.Mockito;
 
 @ExtendWith(MockitoExtension.class)
 public class ArticleServiceTest {
@@ -47,6 +65,9 @@ public class ArticleServiceTest {
 
 	@Mock
 	private ArticleMapper articleMapper;
+
+	@Mock
+	private ArticleViewMapper articleViewMapper;
 
 	@Mock
 	private UserRepository userRepository;
@@ -60,8 +81,38 @@ public class ArticleServiceTest {
 	@Mock
 	private PageResponseMapper pageResponseMapper;
 
+	@Mock
+	private ArticleStorage articleStorage;
+
+	@Mock
+	private UserActivityService userActivityService;
+
+	@Mock
+	private MeterRegistry meterRegistry;
+
+	@Mock
+	private ObjectMapper objectMapper;
+
 	@InjectMocks
 	private ArticleService articleService;
+
+	private final Map<String, Counter> counters = new HashMap<>();
+	private final Map<String, DistributionSummary> summaries = new HashMap<>();
+
+	@BeforeEach
+	void setUpMeterRegistry() {
+		counters.clear();
+		summaries.clear();
+		Mockito.lenient().when(meterRegistry.counter(anyString()))
+			.thenAnswer(invocation -> counters.computeIfAbsent(
+				invocation.getArgument(0, String.class), key -> Mockito.mock(Counter.class)));
+		Mockito.lenient().when(meterRegistry.counter(anyString(), any(String[].class)))
+			.thenAnswer(invocation -> counters.computeIfAbsent(
+				invocation.getArgument(0, String.class), key -> Mockito.mock(Counter.class)));
+		Mockito.lenient().when(meterRegistry.summary(anyString()))
+			.thenAnswer(invocation -> summaries.computeIfAbsent(
+				invocation.getArgument(0, String.class), key -> Mockito.mock(DistributionSummary.class)));
+	}
 
 	@Nested
 	class GetArticle {
@@ -404,6 +455,92 @@ public class ArticleServiceTest {
 
 			assertThat(response.content()).hasSize(1);
 			assertThat(response.content().get(0)).isSameAs(original);
+		}
+	}
+
+	@Nested
+	class RegisterArticleView {
+		@Test
+		@DisplayName("기사 첫 뷰 등록 시 성공 지표가 증가한다")
+		void registerArticleViewIncrementsSuccessMetric() {
+			UUID articleId = UUID.randomUUID();
+			UUID userId = UUID.randomUUID();
+			Article article = Article.builder()
+				.id(articleId)
+				.source(ArticleSource.NAVER)
+				.sourceUrl("https://news.example.com/article")
+				.title("뉴스 제목")
+				.publishDate(Instant.now())
+				.collectedAt(Instant.now())
+				.summary("요약")
+				.commentCount(0L)
+				.viewCount(0L)
+				.build();
+			User user = User.builder()
+				.id(userId)
+				.email("user@example.com")
+				.nickname("tester")
+				.password("secret")
+				.build();
+
+			given(articleRepository.findById(articleId)).willReturn(Optional.of(article));
+			given(userRepository.findById(userId)).willReturn(Optional.of(user));
+			given(articleViewRepository.existsByUserIdAndArticleId(userId, articleId)).willReturn(false);
+			given(articleViewMapper.toDto(any(ArticleView.class))).willReturn(new ArticleViewDto(
+				UUID.randomUUID(),
+				userId,
+				Instant.now(),
+				articleId,
+				article.getSource().name(),
+				article.getSourceUrl(),
+				article.getTitle(),
+				article.getPublishDate(),
+				article.getSummary(),
+				article.getCommentCount(),
+				article.getViewCount()
+			));
+
+			articleService.registerArticleView(articleId, userId);
+
+			Counter counter = counters.get("article.view.register.success");
+			assertThat(counter).isNotNull();
+			verify(counter).increment();
+		}
+
+		@Test
+		@DisplayName("중복 뷰 등록 시 중복 지표가 증가한다")
+		void duplicateViewRegistrationIncrementsDuplicateMetric() {
+			UUID articleId = UUID.randomUUID();
+			UUID userId = UUID.randomUUID();
+			Article article = Article.builder()
+				.id(articleId)
+				.source(ArticleSource.NAVER)
+				.sourceUrl("https://news.example.com/article")
+				.title("뉴스 제목")
+				.publishDate(Instant.now())
+				.collectedAt(Instant.now())
+				.summary("요약")
+				.commentCount(0L)
+				.viewCount(0L)
+				.build();
+			User user = User.builder()
+				.id(userId)
+				.email("user@example.com")
+				.nickname("tester")
+				.password("secret")
+				.build();
+
+			given(articleRepository.findById(articleId)).willReturn(Optional.of(article));
+			given(userRepository.findById(userId)).willReturn(Optional.of(user));
+			given(articleViewRepository.existsByUserIdAndArticleId(userId, articleId)).willReturn(true);
+
+			assertThatThrownBy(() -> articleService.registerArticleView(articleId, userId))
+				.isInstanceOf(ArticleViewAlreadyExistException.class);
+
+			Counter counter = counters.get("article.view.register.duplicate");
+			assertThat(counter).isNotNull();
+			verify(counter).increment();
+			verify(articleViewRepository, never()).save(any());
 		}
 	}
 

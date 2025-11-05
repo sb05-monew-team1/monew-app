@@ -19,6 +19,7 @@ import com.codeit.monew.notification.repository.NotificationRepository;
 import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.exception.UserNotFoundException;
 import com.codeit.monew.user.repository.UserRepository;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,9 +28,16 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
+	private static final String METRIC_NOTIFICATION_CREATE_SUCCESS = "notification.create.success";
+	private static final String METRIC_NOTIFICATION_UNCONFIRMED_SAMPLE = "notification.unconfirmed.count";
+	private static final String METRIC_NOTIFICATION_CONFIRM_SUCCESS = "notification.confirm.success";
+	private static final String METRIC_NOTIFICATION_CONFIRM_FORBIDDEN = "notification.confirm.forbidden";
+	private static final String METRIC_NOTIFICATION_CONFIRM_NOT_FOUND = "notification.confirm.not_found";
+
 	private final NotificationRepository notificationRepository;
 	private final UserRepository userRepository;
 	private final PageResponseMapper pageResponseMapper;
+	private final MeterRegistry meterRegistry;
 
 	public Notification create(NotificationCreateRequest request) {
 		log.debug("알림 등록 시작 - userId: {}, resourceType: {}", request.userId(), request.resourceType());
@@ -49,6 +57,7 @@ public class NotificationService {
 		notificationRepository.save(notification);
 		log.info("알림 등록 - id: {}, resourceType: {}, content: {}", notification.getId(), notification.getResourceType(),
 			notification.getContent());
+		meterRegistry.counter(METRIC_NOTIFICATION_CREATE_SUCCESS).increment();
 
 		return notification;
 	}
@@ -80,6 +89,7 @@ public class NotificationService {
 		}
 
 		long totalElements = notificationRepository.countUnConfirmed(monewRequestUserId);
+		meterRegistry.summary(METRIC_NOTIFICATION_UNCONFIRMED_SAMPLE).record(totalElements);
 
 		return pageResponseMapper.toCursorPageResponse(slice, nextCursor, nextAfter, totalElements);
 	}
@@ -90,6 +100,7 @@ public class NotificationService {
 			UUID userId = UUID.fromString(monewRequestUserId);
 
 			if (!userRepository.existsById(userId)) {
+				meterRegistry.counter(METRIC_NOTIFICATION_CONFIRM_FORBIDDEN, "scope", "all").increment();
 				throw new UserNotFoundException();
 			}
 
@@ -100,6 +111,10 @@ public class NotificationService {
 
 			notificationRepository.saveAll(notifications);
 			log.info("모든 알림 확인 완료: userId: {}", userId);
+			if (!notifications.isEmpty()) {
+				meterRegistry.counter(METRIC_NOTIFICATION_CONFIRM_SUCCESS, "scope", "all")
+					.increment(notifications.size());
+			}
 		} catch (IllegalArgumentException e) {
 			log.error("UUID 변환 실패: {}", monewRequestUserId, e);
 			throw new IllegalArgumentException(e);
@@ -113,10 +128,12 @@ public class NotificationService {
 			UUID userId = UUID.fromString(monewRequestUserId);
 
 			if (!userRepository.existsById(userId)) {
+				meterRegistry.counter(METRIC_NOTIFICATION_CONFIRM_FORBIDDEN, "scope", "single").increment();
 				throw new UserNotFoundException();
 			}
 
 			if (!notificationRepository.existsById(notificationId)) {
+				meterRegistry.counter(METRIC_NOTIFICATION_CONFIRM_NOT_FOUND).increment();
 				throw new NotificationNotFoundException();
 			}
 
@@ -127,6 +144,7 @@ public class NotificationService {
 
 			notificationRepository.save(notification);
 			log.info("알림 확인 완료: notificationId: {}, userId: {}", notificationId, userId);
+			meterRegistry.counter(METRIC_NOTIFICATION_CONFIRM_SUCCESS, "scope", "single").increment();
 		} catch (IllegalArgumentException e) {
 			throw new IllegalArgumentException(e);
 		}
