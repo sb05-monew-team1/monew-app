@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: dev # dev | prod
+    active: prod # dev | prod
   config:
     import: optional:file:.env[.properties]
 
@@ -24,9 +24,3 @@ management:
 
 server:
   port: 8080 # app / 8081 # batch
-  servlet:
-    session:
-      cookie:
-        same-site: none
-        http-only: true
-        secure: false

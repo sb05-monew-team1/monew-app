@@ -1,25 +1,14 @@
 package com.codeit.monew.interest.controller;
 
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import com.codeit.monew.common.dto.CursorPageResponse;
-import com.codeit.monew.interest.dto.InterestDto;
-import com.codeit.monew.interest.dto.InterestRegisterRequest;
-import com.codeit.monew.interest.dto.InterestSearchRequest;
-import com.codeit.monew.interest.dto.InterestUpdateRequest;
-import com.codeit.monew.interest.dto.SubscriptionDto;
-import com.codeit.monew.interest.service.InterestService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.UUID;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -34,6 +23,15 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+
+import com.codeit.monew.common.dto.CursorPageResponse;
+import com.codeit.monew.interest.dto.InterestDto;
+import com.codeit.monew.interest.dto.InterestRegisterRequest;
+import com.codeit.monew.interest.dto.InterestSearchRequest;
+import com.codeit.monew.interest.dto.InterestUpdateRequest;
+import com.codeit.monew.interest.dto.SubscriptionDto;
+import com.codeit.monew.interest.service.InterestService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @WebMvcTest(controllers = InterestController.class,
 	excludeFilters = {
@@ -115,7 +113,8 @@ class InterestControllerTest {
 			var request = new InterestUpdateRequest(List.of("수정된 키워드"));
 			var responseDto = new InterestDto(interestId, "기존 이름", List.of("수정된 키워드"), 10L, true);
 
-			when(interestService.updateInterest(eq(interestId), any(InterestUpdateRequest.class))).thenReturn(responseDto);
+			when(interestService.updateInterest(eq(interestId), any(InterestUpdateRequest.class))).thenReturn(
+				responseDto);
 
 			// when
 			ResultActions actions = mockMvc.perform(patch("/api/interests/{interestId}", interestId)

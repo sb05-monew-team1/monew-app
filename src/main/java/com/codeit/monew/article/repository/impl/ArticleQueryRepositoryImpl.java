@@ -38,75 +38,18 @@ public class ArticleQueryRepositoryImpl implements ArticleQueryRepository {
 	@Override
 	public ArticleSearchResultDto search(ArticleSearchRequestFromService req) {
 
-		BooleanBuilder builder = new BooleanBuilder();
-		builder.and(a.deletedAt.isNull());
-
-		if (req.keyword() != null && !req.keyword().isBlank()) {
-			builder.and(a.title.containsIgnoreCase(req.keyword())
-				.or(a.summary.containsIgnoreCase(req.keyword())));
-		}
-
-		if (req.interestId() != null) {
-			builder.and(a.interests.any().id.eq(req.interestId()));
-		}
-
-		if (req.sourceIn() != null && !req.sourceIn().isEmpty()) {
-			builder.and(a.source.in(req.sourceIn()));
-		}
-
-		if (req.publishDateFrom() != null && req.publishDateTo() != null) {
-			builder.and(a.publishDate.goe(req.publishDateFrom())
-				.and(a.publishDate.loe(req.publishDateTo())));
-		}
+		BooleanBuilder builder = buildFilterCondition(req);
 
 		NumberExpression<Long> commentCountExpr = c.id.countDistinct();
 		NumberExpression<Long> viewCountExpr = articleView.id.countDistinct();
 
-		BooleanBuilder having = new BooleanBuilder();
-
 		Order order = req.direction();
-		OrderSpecifier<?> orderBy = switch (req.orderBy()) {
-			case "commentCount" -> new OrderSpecifier<>(order, commentCountExpr);
-			case "viewCount" -> new OrderSpecifier<>(order, viewCountExpr);
-			default -> new OrderSpecifier<>(order, a.publishDate);
-		};
+		OrderSpecifier<?> orderBy = resolveOrderBy(req.orderBy(), order, commentCountExpr, viewCountExpr);
 		OrderSpecifier<?> publishDateOrder = order == Order.ASC ? a.publishDate.asc() : a.publishDate.desc();
 
-		if (req.cursor() != null && !req.cursor().isBlank() && req.after() != null) {
-			Instant after = req.after();
-
-			switch (req.orderBy()) {
-				case "commentCount" -> {
-					long cursor = Long.parseLong(req.cursor());
-					BooleanExpression countPart = order == Order.DESC
-						? commentCountExpr.lt(cursor)
-						: commentCountExpr.gt(cursor);
-					BooleanExpression tieBreak = order == Order.DESC
-						? commentCountExpr.eq(cursor).and(a.createdAt.lt(after))
-						: commentCountExpr.eq(cursor).and(a.createdAt.gt(after));
-					having.and(countPart.or(tieBreak));
-				}
-				case "viewCount" -> {
-					long cursor = Long.parseLong(req.cursor());
-					BooleanExpression viewPart = order == Order.DESC
-						? viewCountExpr.lt(cursor)
-						: viewCountExpr.gt(cursor);
-					BooleanExpression tieBreak = order == Order.DESC
-						? viewCountExpr.eq(cursor).and(a.createdAt.lt(after))
-						: viewCountExpr.eq(cursor).and(a.createdAt.gt(after));
-					having.and(viewPart.or(tieBreak));
-				}
-				case "publishDate" -> {
-					Instant cursor = Instant.parse(req.cursor());
-					BooleanExpression datePart = order == Order.DESC
-						? a.publishDate.lt(cursor)
-						: a.publishDate.gt(cursor);
-					BooleanExpression tieBreak = order == Order.DESC
-						? a.publishDate.eq(cursor).and(a.createdAt.lt(after))
-						: a.publishDate.eq(cursor).and(a.createdAt.gt(after));
-					builder.and(datePart.or(tieBreak));
-				}
-			}
+		CursorConstraint cursorConstraint = buildCursorConstraint(req, order, commentCountExpr, viewCountExpr);
+		if (cursorConstraint.whereCondition() != null) {
+			builder.and(cursorConstraint.whereCondition());
 		}
 
 		QArticleView viewedArticleView = new QArticleView("viewedArticle");
@@ -114,12 +57,12 @@ public class ArticleQueryRepositoryImpl implements ArticleQueryRepository {
 			.selectOne()
 			.from(viewedArticleView)
 			.where(viewedArticleView.article.eq(a)
-				.and(viewedArticleView.user.id.eq(req.monewRequestUserId())))
+				.and(viewedArticleView.user.id.eq(req.userId())))
 			.exists();
 
 		int limit = req.limit();
 
-		List<Tuple> rowsPlusOne = queryFactory
+		var query = queryFactory
 			.select(
 				a.id,
 				a.source,
@@ -137,8 +80,13 @@ public class ArticleQueryRepositoryImpl implements ArticleQueryRepository {
 			.leftJoin(a.comments, c)
 			.leftJoin(a.articleViews, articleView)
 			.where(builder)
-			.groupBy(a.id, a.source, a.sourceUrl, a.title, a.publishDate, a.summary, a.createdAt)
-			.having(having)
+			.groupBy(a.id, a.source, a.sourceUrl, a.title, a.publishDate, a.summary, a.createdAt);
+
+		if (cursorConstraint.havingCondition() != null) {
+			query.having(cursorConstraint.havingCondition());
+		}
+
+		List<Tuple> rowsPlusOne = query
 			.orderBy(orderBy, publishDateOrder)
 			.limit(limit + 1L)
 			.fetch();
@@ -163,7 +111,7 @@ public class ArticleQueryRepositoryImpl implements ArticleQueryRepository {
 					Boolean.TRUE.equals(tuple.get(viewedByMeExpr))
 				);
 			})
-			.collect(java.util.stream.Collectors.toList());
+			.toList();
 
 		Instant lastCreatedAt = contentTuples.isEmpty()
 			? null
@@ -171,6 +119,83 @@ public class ArticleQueryRepositoryImpl implements ArticleQueryRepository {
 
 		Pageable pageable = Pageable.ofSize(limit);
 		return new ArticleSearchResultDto(new SliceImpl<>(content, pageable, hasNext), lastCreatedAt);
+	}
+
+	private BooleanBuilder buildFilterCondition(ArticleSearchRequestFromService req) {
+		BooleanBuilder builder = new BooleanBuilder();
+		builder.and(a.deletedAt.isNull());
+
+		if (req.keyword() != null && !req.keyword().isBlank()) {
+			builder.and(a.title.containsIgnoreCase(req.keyword())
+				.or(a.summary.containsIgnoreCase(req.keyword())));
+		}
+
+		if (req.interestId() != null) {
+			builder.and(a.interests.any().id.eq(req.interestId()));
+		}
+
+		if (req.sourceIn() != null && !req.sourceIn().isEmpty()) {
+			builder.and(a.source.in(req.sourceIn()));
+		}
+
+		if (req.publishDateFrom() != null && req.publishDateTo() != null) {
+			builder.and(a.publishDate.goe(req.publishDateFrom())
+				.and(a.publishDate.loe(req.publishDateTo())));
+		}
+
+		return builder;
+	}
+
+	private OrderSpecifier<?> resolveOrderBy(String orderBy, Order order,
+		NumberExpression<Long> commentCountExpr, NumberExpression<Long> viewCountExpr) {
+
+		return switch (orderBy) {
+			case "commentCount" -> new OrderSpecifier<>(order, commentCountExpr);
+			case "viewCount" -> new OrderSpecifier<>(order, viewCountExpr);
+			default -> new OrderSpecifier<>(order, a.publishDate);
+		};
+	}
+
+	private CursorConstraint buildCursorConstraint(ArticleSearchRequestFromService req, Order order,
+		NumberExpression<Long> commentCountExpr, NumberExpression<Long> viewCountExpr) {
+
+		if (req.cursor() == null || req.cursor().isBlank() || req.after() == null) {
+			return CursorConstraint.EMPTY;
+		}
+
+		return switch (req.orderBy()) {
+			case "commentCount" -> buildCountCursor(commentCountExpr, req.cursor(), req.after(), order);
+			case "viewCount" -> buildCountCursor(viewCountExpr, req.cursor(), req.after(), order);
+			case "publishDate" -> buildPublishDateCursor(req.cursor(), req.after(), order);
+			default -> CursorConstraint.EMPTY;
+		};
+	}
+
+	private CursorConstraint buildCountCursor(NumberExpression<Long> metricExpr, String cursor,
+		Instant after, Order order) {
+		long cursorValue = Long.parseLong(cursor);
+		BooleanExpression metricComparison = order == Order.DESC
+			? metricExpr.lt(cursorValue)
+			: metricExpr.gt(cursorValue);
+		BooleanExpression tieBreak = order == Order.DESC
+			? metricExpr.eq(cursorValue).and(a.createdAt.lt(after))
+			: metricExpr.eq(cursorValue).and(a.createdAt.gt(after));
+		return new CursorConstraint(null, metricComparison.or(tieBreak));
+	}
+
+	private CursorConstraint buildPublishDateCursor(String cursor, Instant after, Order order) {
+		Instant cursorInstant = Instant.parse(cursor);
+		BooleanExpression publishComparison = order == Order.DESC
+			? a.publishDate.lt(cursorInstant)
+			: a.publishDate.gt(cursorInstant);
+		BooleanExpression tieBreak = order == Order.DESC
+			? a.publishDate.eq(cursorInstant).and(a.createdAt.lt(after))
+			: a.publishDate.eq(cursorInstant).and(a.createdAt.gt(after));
+		return new CursorConstraint(publishComparison.or(tieBreak), null);
+	}
+
+	private record CursorConstraint(BooleanExpression whereCondition, BooleanExpression havingCondition) {
+		private static final CursorConstraint EMPTY = new CursorConstraint(null, null);
 	}
 
 }
