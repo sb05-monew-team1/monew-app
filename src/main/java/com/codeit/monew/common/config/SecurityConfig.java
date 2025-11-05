@@ -34,7 +34,7 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.GET).permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/users").permitAll()
 				.requestMatchers("/api/users/login").permitAll()
-				.anyRequest().permitAll()
+				.anyRequest().authenticated()
 			);
 		// (로그인/로그아웃 폼 비활성화)
 		http.formLogin(form -> form.disable());
