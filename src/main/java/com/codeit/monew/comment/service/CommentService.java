@@ -1,7 +1,6 @@
 package com.codeit.monew.comment.service;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.PageRequest;
@@ -10,6 +9,7 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.codeit.monew.activity.service.UserActivityService;
 import com.codeit.monew.article.domain.Article;
 import com.codeit.monew.article.repository.ArticleRepository;
 import com.codeit.monew.comment.domain.Comment;
@@ -50,9 +50,11 @@ public class CommentService {
 	private final CommentMapper commentMapper;
 	private final NotificationService notificationService;
 	private final PageResponseMapper pageResponseMapper;
+	private final UserActivityService userActivityService;
 
 	/**
 	 * 댓글 등록
+	 *
 	 * @param request 댓글 등록 요청
 	 * @return 등록된 댓글 정보
 	 */
@@ -82,6 +84,8 @@ public class CommentService {
 		// 저장
 		Comment savedComment = commentRepository.save(comment);
 
+		userActivityService.deleteUserActivity(user.getId());
+
 		log.info("댓글 등록 완료 - commentId: {}", savedComment.getId());
 
 		// DTO 변환 후 반환 (JPA 매핑으로 user.getNickname() 바로 접근 가능)
@@ -90,9 +94,10 @@ public class CommentService {
 
 	/**
 	 * 댓글 수정
-	 * @param commentId 댓글 ID
+	 *
+	 * @param commentId     댓글 ID
 	 * @param requestUserId 요청자 ID
-	 * @param request 댓글 수정 요청
+	 * @param request       댓글 수정 요청
 	 * @return 수정된 댓글 정보
 	 */
 	@Transactional
@@ -118,12 +123,15 @@ public class CommentService {
 
 		log.info("댓글 수정 완료 - commentId: {}", commentId);
 
+		userActivityService.deleteUserActivity(requestUserId);
+
 		// DTO 변환 후 반환
 		return commentMapper.toDto(comment, comment.getUser().getNickname(), false);
 	}
 
 	/**
 	 * 댓글 논리 삭제
+	 *
 	 * @param commentId 댓글 ID
 	 */
 	@Transactional
@@ -137,12 +145,14 @@ public class CommentService {
 
 		// 논리 삭제 (deletedAt 필드에 현재 시간 저장)
 		comment.softDelete();
-
 		log.info("댓글 논리 삭제 완료 - commentId: {}", commentId);
+
+		userActivityService.deleteUserActivity(comment.getUser().getId());
 	}
 
 	/**
 	 * 댓글 물리 삭제 (테스트용)
+	 *
 	 * @param commentId 댓글 ID
 	 */
 	@Transactional
@@ -162,11 +172,13 @@ public class CommentService {
 
 	/**
 	 * 댓글 좋아요 등록
+	 *
 	 * @param commentId 댓글 ID
-	 * @param userId 사용자 ID
+	 * @param userId    사용자 ID
+	 * @return 좋아요한 댓글 정보
 	 */
 	@Transactional
-	public void likeComment(UUID commentId, UUID userId) {
+	public CommentDto likeComment(UUID commentId, UUID userId) {
 		log.info("댓글 좋아요 등록 시작 - commentId: {}, userId: {}", commentId, userId);
 
 		// 댓글 조회
@@ -199,25 +211,30 @@ public class CommentService {
 
 		log.info("댓글 좋아요 등록 완료 - commentId: {}, userId: {}", commentId, userId);
 
-		if (!comment.getUser().getId().equals(userId)) {
-			String notificationMsg = user.getNickname() + "님이 나의 댓글을 좋아합니다.";
-			NotificationCreateRequest notificationCreateRequest = new NotificationCreateRequest(
-				comment.getUser().getId(),
-				notificationMsg,
-				"commentLike",
-				user.getId()
-			);
+		log.debug("댓글 좋아요 알림 등록 시작: {}", userId);
+		String notificationMsg = user.getNickname() + "님이 나의 댓글을 좋아합니다.";
+		NotificationCreateRequest notificationCreateRequest = new NotificationCreateRequest(
+			comment.getUser().getId(),
+			notificationMsg,
+			"comment",
+			commentId
+		);
 
-			System.out.println("댓글 좋아요 알림 생성 : " + notificationService.create(notificationCreateRequest));
-			// notificationService.create(notificationCreateRequest);
-		}
+		notificationService.create(notificationCreateRequest);
+		log.info("댓글 좋아요 알림 등록 완료 - commentId: {}, userId: {}", commentId, userId);
 
+		log.debug("사용자 활동 내역 mongoDB에서 삭제 - userId: {}", user.getId());
+		userActivityService.deleteUserActivity(user.getId());
+
+		// 좋아요한 댓글 정보 반환 (likedByMe = true)
+		return commentMapper.toDto(comment, comment.getUser().getNickname(), true);
 	}
 
 	/**
 	 * 댓글 좋아요 취소
+	 *
 	 * @param commentId 댓글 ID
-	 * @param userId 사용자 ID
+	 * @param userId    사용자 ID
 	 */
 	@Transactional
 	public void unlikeComment(UUID commentId, UUID userId) {
@@ -246,10 +263,13 @@ public class CommentService {
 		comment.decreaseLikeCount();
 
 		log.info("댓글 좋아요 취소 완료 - commentId: {}, userId: {}", commentId, userId);
+
+		userActivityService.deleteUserActivity(user.getId());
 	}
 
 	/**
 	 * 특정 기사의 댓글 목록 조회 (정렬 및 커서 페이지네이션)
+	 *
 	 * @param request 댓글 목록 조회 요청
 	 * @return 댓글 목록 (커서 페이지네이션 응답)
 	 */
@@ -257,52 +277,9 @@ public class CommentService {
 		log.info("댓글 목록 조회 시작 - articleId: {}, orderBy: {}, direction: {}, cursor: {}, limit: {}",
 			request.articleId(), request.orderBy(), request.direction(), request.cursor(), request.limit());
 
-		// 기사 존재 확인
-		Article article = articleRepository.findById(request.articleId())
-			.orElseThrow(() -> new BusinessException(ErrorCode.ARTICLE_NOT_FOUND)
-				.addDetail("articleId", request.articleId()));
-
-		// 페이징 설정 (limit+1 조회로 hasNext 판단)
+		Article article = findArticleOrThrow(request);
 		Pageable pageable = PageRequest.of(0, request.limit() + 1);
-
-		// 댓글 목록 조회 (정렬 조건 및 방향에 따라)
-		Slice<Comment> commentSlice;
-		boolean isDesc = request.direction() == Order.DESC;
-
-		if (request.orderBy().equals("likeCount")) {
-			// 좋아요순 조회
-			Long likeCursor = null;
-			Instant dateCursor = null;
-			if (request.cursor() != null && !request.cursor().isEmpty()) {
-				String[] parts = request.cursor().split("_");
-				likeCursor = Long.parseLong(parts[0]);
-				dateCursor = Instant.parse(parts[1]);
-			}
-
-			if (isDesc) {
-				commentSlice = commentRepository.findByArticleAndNotDeletedOrderByLikesDesc(
-					article, likeCursor, dateCursor, pageable
-				);
-			} else {
-				commentSlice = commentRepository.findByArticleAndNotDeletedOrderByLikesAsc(
-					article, likeCursor, dateCursor, pageable
-				);
-			}
-		} else {
-			// 날짜순 조회 (기본값)
-			Instant dateCursor = (request.cursor() != null && !request.cursor().isEmpty())
-				? Instant.parse(request.cursor()) : null;
-
-			if (isDesc) {
-				commentSlice = commentRepository.findByArticleAndNotDeletedOrderByDateDesc(
-					article, dateCursor, pageable
-				);
-			} else {
-				commentSlice = commentRepository.findByArticleAndNotDeletedOrderByDateAsc(
-					article, dateCursor, pageable
-				);
-			}
-		}
+		Slice<Comment> commentSlice = fetchComments(request, article, pageable);
 
 		// 사용자 조회
 		User requestUser = userRepository.findById(request.monewRequestUserId())
@@ -318,27 +295,97 @@ public class CommentService {
 			return commentMapper.toDto(comment, comment.getUser().getNickname(), likedByMe);
 		});
 
-		// 다음 커서 생성
-		String nextCursor = null;
-		String nextAfter = null;
-
-		if (commentDtoSlice.hasNext() && commentDtoSlice.getNumberOfElements() > 0) {
-			CommentDto lastComment = commentDtoSlice.getContent().get(commentDtoSlice.getNumberOfElements() - 1);
-
-			nextAfter = lastComment.createdAt().toString();
-			if (request.orderBy().equals("likeCount")) {
-				// 좋아요순: likeCount_createdAt 형식
-				nextCursor = lastComment.likeCount() + "_" + lastComment.createdAt().toString();
-			} else {
-				// 날짜순: createdAt만
-				nextCursor = nextAfter;
-			}
-		}
+		CursorData cursor = buildCursor(request, commentDtoSlice);
 
 		log.info("댓글 목록 조회 완료 - articleId: {}, 조회된 댓글 수: {}",
 			request.articleId(), commentDtoSlice.getNumberOfElements());
 
 		// CursorPageResponse 생성 (totalElements는 -1로 설정, 커서 페이지네이션에서는 전체 개수 불필요)
-		return pageResponseMapper.toCursorPageResponse(commentDtoSlice, nextCursor, nextAfter, -1);
+		return pageResponseMapper.toCursorPageResponse(commentDtoSlice, cursor.value(), cursor.after(), -1);
+	}
+
+	private Article findArticleOrThrow(CommentSearchRequest request) {
+		return articleRepository.findById(request.articleId())
+			.orElseThrow(() -> new BusinessException(ErrorCode.ARTICLE_NOT_FOUND)
+				.addDetail("articleId", request.articleId()));
+	}
+
+	private Slice<Comment> fetchComments(CommentSearchRequest request, Article article, Pageable pageable) {
+		boolean isDesc = request.direction() == Order.DESC;
+
+		if (isLikeOrder(request)) {
+			LikeCursor cursor = parseLikeCursor(request.cursor());
+			return isDesc
+				? commentRepository.findByArticleAndNotDeletedOrderByLikesDesc(
+				article, cursor.likeCount(), cursor.createdAt(), pageable)
+				: commentRepository.findByArticleAndNotDeletedOrderByLikesAsc(
+				article, cursor.likeCount(), cursor.createdAt(), pageable);
+		}
+
+		Instant createdAtCursor = parseCreatedAtCursor(request.cursor());
+		return isDesc
+			? fetchDescendingByDate(article, createdAtCursor, pageable)
+			: fetchAscendingByDate(article, createdAtCursor, pageable);
+	}
+
+	private Slice<Comment> fetchDescendingByDate(Article article, Instant cursor, Pageable pageable) {
+		return cursor == null
+			? commentRepository.findByArticleAndDeletedAtIsNullOrderByCreatedAtDesc(article, pageable)
+			: commentRepository.findByArticleAndDeletedAtIsNullAndCreatedAtLessThanOrderByCreatedAtDesc(
+			article, cursor, pageable);
+	}
+
+	private Slice<Comment> fetchAscendingByDate(Article article, Instant cursor, Pageable pageable) {
+		return cursor == null
+			? commentRepository.findByArticleAndDeletedAtIsNullOrderByCreatedAtAsc(article, pageable)
+			: commentRepository.findByArticleAndDeletedAtIsNullAndCreatedAtGreaterThanOrderByCreatedAtAsc(
+			article, cursor, pageable);
+	}
+
+	private boolean isLikeOrder(CommentSearchRequest request) {
+		return "likeCount".equals(request.orderBy());
+	}
+
+	private LikeCursor parseLikeCursor(String rawCursor) {
+		if (rawCursor == null || rawCursor.isBlank()) {
+			return LikeCursor.empty();
+		}
+		String[] parts = rawCursor.split("_");
+		long likeCursor = Long.parseLong(parts[0]);
+		Instant createdAtCursor = Instant.parse(parts[1]);
+		return new LikeCursor(likeCursor, createdAtCursor);
+	}
+
+	private Instant parseCreatedAtCursor(String rawCursor) {
+		return (rawCursor == null || rawCursor.isBlank()) ? null : Instant.parse(rawCursor);
+	}
+
+	private CursorData buildCursor(CommentSearchRequest request, Slice<CommentDto> commentDtoSlice) {
+		if (!commentDtoSlice.hasNext() || commentDtoSlice.getNumberOfElements() == 0) {
+			return CursorData.empty();
+		}
+
+		CommentDto lastComment = commentDtoSlice.getContent()
+			.get(commentDtoSlice.getNumberOfElements() - 1);
+		String nextAfter = String.valueOf(lastComment.createdAt());
+
+		if (!isLikeOrder(request)) {
+			return new CursorData(nextAfter, nextAfter);
+		}
+
+		String nextCursor = lastComment.likeCount() + "_" + lastComment.createdAt();
+		return new CursorData(nextCursor, nextAfter);
+	}
+
+	private record CursorData(String value, String after) {
+		private static CursorData empty() {
+			return new CursorData(null, null);
+		}
+	}
+
+	private record LikeCursor(Long likeCount, Instant createdAt) {
+		private static LikeCursor empty() {
+			return new LikeCursor(null, null);
+		}
 	}
 }

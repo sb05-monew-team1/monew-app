@@ -22,7 +22,7 @@ public record ArticleSearchRequestFromService(
 	String cursor,
 	Instant after,
 	Integer limit,
-	UUID monewRequestUserId
+	UUID userId
 ) {
 	public static ArticleSearchRequestFromService from(ArticleSearchRequest request) {
 		ZoneId zoneId = ZoneId.of("Asia/Seoul");
@@ -56,7 +56,7 @@ public record ArticleSearchRequestFromService(
 			request.cursor(),
 			request.after(),
 			request.limit(),
-			request.monewRequestUserId()
+			request.userId()
 		);
 	}
 

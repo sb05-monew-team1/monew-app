@@ -23,6 +23,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.codeit.monew.activity.repository.UserActivityRepository;
 import com.codeit.monew.article.exception.ArticleViewAlreadyExistException;
 import com.codeit.monew.article.repository.ArticleRepository;
 import com.codeit.monew.article.service.ArticleService;
@@ -52,6 +53,8 @@ public class ArticleApiIntegrationTest {
 
 	@MockitoBean
 	private ArticleStorage articleStorage;
+	@MockitoBean
+	private UserActivityRepository userActivityRepository;
 
 	@Nested
 	class RegisterArticleView {

@@ -16,6 +16,9 @@ public enum ErrorCode {
 	USER_ALREADY_DELETED("이미 삭제된 사용자입니다.", HttpStatus.CONFLICT),
 	USER_NOT_SOFT_DELETED("논리 삭제되지 않은 사용자입니다.", HttpStatus.BAD_REQUEST),
 
+	// UserActivity
+	USERACTIVITY_NOT_FOUND("MongoDB에서 해당 사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+
 	// Article
 	ARTICLE_NOT_FOUND("기사를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
 	ARTICLE_VIEW_ALREADY_EXIST("이미 존재하는 기사 뷰입니다.", HttpStatus.CONFLICT),
@@ -25,11 +28,15 @@ public enum ErrorCode {
 	ALREADY_SUBSCRIBED("이미 구독한 관심사입니다.", HttpStatus.CONFLICT),
 	INTEREST_NOT_FOUND("관심사 정보를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
 	SUBSCRIPTION_NOT_FOUND("구독 정보를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+	INVALID_INPUT_VALUE("유효하지 않은 입력 값입니다.", HttpStatus.BAD_REQUEST),
 
 	// Comment
 	COMMENT_NOT_FOUND("댓글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
 	COMMENT_LIKE_ALREADY_EXISTS("이미 좋아요를 누른 댓글입니다.", HttpStatus.CONFLICT),
 	COMMENT_LIKE_NOT_FOUND("좋아요를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+
+	// Notification
+	NOTIFICATION_NOT_FOUND("알림을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
 
 	// Common
 	ARTICLE_RESTORE_FAILED("기사 복원에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),

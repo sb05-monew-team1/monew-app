@@ -23,7 +23,8 @@ import lombok.experimental.SuperBuilder;
 @Entity
 @Table(name = "notifications")
 @SuperBuilder
-@Setter @Getter
+@Setter
+@Getter
 @EntityListeners(AuditingEntityListener.class)
 @AllArgsConstructor
 @NoArgsConstructor

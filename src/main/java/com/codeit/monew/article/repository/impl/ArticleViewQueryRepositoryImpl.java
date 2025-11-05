@@ -1,0 +1,58 @@
+package com.codeit.monew.article.repository.impl;
+
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.stereotype.Repository;
+
+import com.codeit.monew.article.domain.QArticle;
+import com.codeit.monew.article.domain.QArticleView;
+import com.codeit.monew.article.dto.ArticleViewDto;
+import com.codeit.monew.article.repository.ArticleViewQueryRepository;
+import com.codeit.monew.comment.domain.QComment;
+import com.codeit.monew.user.domain.QUser;
+import com.querydsl.core.types.Projections;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+
+import lombok.RequiredArgsConstructor;
+
+@Repository
+@RequiredArgsConstructor
+public class ArticleViewQueryRepositoryImpl implements ArticleViewQueryRepository {
+
+	private final JPAQueryFactory queryFactory;
+
+	private static final QArticleView av = QArticleView.articleView;
+	private static final QArticle a = QArticle.article;
+	private static final QComment c = QComment.comment;
+	private static final QUser u = QUser.user;
+
+	@Override
+	public List<ArticleViewDto> searchRecentArticleViews(UUID userId) {
+
+		return queryFactory.
+			select(
+				Projections.constructor(
+					ArticleViewDto.class,
+					av.id,
+					av.user.id,
+					av.createdAt,
+					a.id,
+					a.source.stringValue(),
+					a.sourceUrl,
+					a.title,
+					a.publishDate,
+					a.summary,
+					c.id.countDistinct().longValue(),
+					av.id.countDistinct().longValue()
+				))
+			.from(a)
+			.leftJoin(a.articleViews, av)
+			.leftJoin(a.comments, c)
+			.where(av.user.id.eq(userId))
+			.groupBy(a.id, av.id, av.user.id, av.createdAt)
+			.orderBy(av.createdAt.desc())
+			.limit(10)
+			.fetch();
+	}
+}
