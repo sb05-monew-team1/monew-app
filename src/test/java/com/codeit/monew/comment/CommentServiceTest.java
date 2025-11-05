@@ -3,12 +3,16 @@ package com.codeit.monew.comment;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
+import static org.mockito.Mockito.never;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,17 +28,29 @@ import com.codeit.monew.article.domain.Article;
 import com.codeit.monew.article.domain.ArticleSource;
 import com.codeit.monew.article.repository.ArticleRepository;
 import com.codeit.monew.comment.domain.Comment;
+import com.codeit.monew.comment.domain.CommentLike;
 import com.codeit.monew.comment.dto.CommentDto;
+import com.codeit.monew.comment.dto.CommentRegisterRequest;
 import com.codeit.monew.comment.dto.CommentSearchRequest;
 import com.codeit.monew.comment.mapper.CommentMapper;
 import com.codeit.monew.comment.repository.CommentLikeRepository;
 import com.codeit.monew.comment.repository.CommentRepository;
 import com.codeit.monew.comment.service.CommentService;
 import com.codeit.monew.common.dto.CursorPageResponse;
+import com.codeit.monew.common.exception.BusinessException;
 import com.codeit.monew.common.util.PageResponseMapper;
+import com.codeit.monew.notification.dto.NotificationCreateRequest;
+import com.codeit.monew.notification.service.NotificationService;
 import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.repository.UserRepository;
 import com.querydsl.core.types.Order;
+
+import com.codeit.monew.activity.service.UserActivityService;
+
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+
+import org.mockito.Mockito;
 
 @ExtendWith(MockitoExtension.class)
 class CommentServiceTest {
@@ -51,10 +67,28 @@ class CommentServiceTest {
 	private CommentMapper commentMapper;
 	@Mock
 	private PageResponseMapper pageResponseMapper;
+	@Mock
+	private NotificationService notificationService;
+	@Mock
+	private UserActivityService userActivityService;
+	@Mock
+	private MeterRegistry meterRegistry;
 
 	@InjectMocks
 	private CommentService commentService;
 
+	private final Map<String, Counter> counters = new HashMap<>();
+
+	@BeforeEach
+	void setUpMeterRegistry() {
+		counters.clear();
+		Mockito.lenient().when(meterRegistry.counter(anyString()))
+			.thenAnswer(invocation -> counters.computeIfAbsent(
+				invocation.getArgument(0, String.class), key -> Mockito.mock(Counter.class)));
+		Mockito.lenient().when(meterRegistry.counter(anyString(), any(String[].class)))
+			.thenAnswer(invocation -> counters.computeIfAbsent(
+				invocation.getArgument(0, String.class), key -> Mockito.mock(Counter.class)));
+	}
 	@Test
 	@DisplayName("좋아요순 댓글 조회 시 복합 커서를 생성한다")
 	void getCommentsLikeOrderBuildsCompositeCursor() {
@@ -360,6 +394,116 @@ class CommentServiceTest {
 		assertThat(response.hasNext()).isFalse();
 		verify(commentRepository).findByArticleAndNotDeletedOrderByLikesAsc(
 			article, 1L, likeCursorCreatedAt, PageRequest.of(0, request.limit() + 1));
+	}
+
+	@Test
+	@DisplayName("댓글 등록 시 성공 지표를 증가시킨다")
+	void registerCommentIncrementsMetric() {
+		UUID articleId = UUID.randomUUID();
+		UUID userId = UUID.randomUUID();
+		CommentRegisterRequest request = new CommentRegisterRequest(articleId, userId, "내용");
+
+		Article article = buildArticle(articleId);
+		User user = buildUser(userId, "author");
+		UUID commentId = UUID.randomUUID();
+		Comment savedComment = Comment.builder()
+			.id(commentId)
+			.article(article)
+			.user(user)
+			.content(request.content())
+			.likeCount(0L)
+			.build();
+
+		given(articleRepository.findById(articleId)).willReturn(Optional.of(article));
+		given(userRepository.findById(userId)).willReturn(Optional.of(user));
+		given(commentRepository.save(any(Comment.class))).willReturn(savedComment);
+		given(commentMapper.toDto(savedComment, user.getNickname(), false)).willReturn(new CommentDto(
+			commentId,
+			articleId,
+			userId,
+			user.getNickname(),
+			request.content(),
+			0L,
+			false,
+			Instant.now()
+		));
+
+		commentService.registerComment(request);
+
+		Counter counter = counters.get("comment.create.success");
+		assertThat(counter).isNotNull();
+		verify(counter).increment();
+		verify(userActivityService).deleteUserActivity(userId);
+	}
+
+	@Test
+	@DisplayName("댓글 좋아요 등록 시 성공 지표를 증가시킨다")
+	void likeCommentIncrementsSuccessMetric() {
+		UUID commentId = UUID.randomUUID();
+		UUID userId = UUID.randomUUID();
+		Article article = buildArticle(UUID.randomUUID());
+		User author = buildUser(UUID.randomUUID(), "author");
+		User liker = buildUser(userId, "liker");
+		Comment comment = Comment.builder()
+			.id(commentId)
+			.article(article)
+			.user(author)
+			.content("test")
+			.likeCount(0L)
+			.build();
+
+		given(commentRepository.findById(commentId)).willReturn(Optional.of(comment));
+		given(userRepository.findById(userId)).willReturn(Optional.of(liker));
+		given(commentLikeRepository.existsByCommentAndUser(comment, liker)).willReturn(false);
+		given(commentLikeRepository.save(any(CommentLike.class))).willAnswer(invocation -> invocation.getArgument(0));
+		given(commentMapper.toDto(comment, author.getNickname(), true)).willReturn(new CommentDto(
+			commentId,
+			article.getId(),
+			author.getId(),
+			author.getNickname(),
+			"test",
+			1L,
+			true,
+			Instant.now()
+		));
+		given(notificationService.create(any(NotificationCreateRequest.class))).willAnswer(invocation -> null);
+
+		commentService.likeComment(commentId, userId);
+
+		Counter counter = counters.get("comment.like.success");
+		assertThat(counter).isNotNull();
+		verify(counter).increment();
+		verify(notificationService).create(any(NotificationCreateRequest.class));
+		verify(userActivityService).deleteUserActivity(userId);
+	}
+
+	@Test
+	@DisplayName("이미 좋아요된 댓글이면 중복 지표를 증가시킨다")
+	void likeCommentDuplicateIncrementsMetric() {
+		UUID commentId = UUID.randomUUID();
+		UUID userId = UUID.randomUUID();
+		Article article = buildArticle(UUID.randomUUID());
+		User author = buildUser(UUID.randomUUID(), "author");
+		User liker = buildUser(userId, "liker");
+		Comment comment = Comment.builder()
+			.id(commentId)
+			.article(article)
+			.user(author)
+			.content("test")
+			.likeCount(1L)
+			.build();
+
+		given(commentRepository.findById(commentId)).willReturn(Optional.of(comment));
+		given(userRepository.findById(userId)).willReturn(Optional.of(liker));
+		given(commentLikeRepository.existsByCommentAndUser(comment, liker)).willReturn(true);
+
+		assertThatThrownBy(() -> commentService.likeComment(commentId, userId))
+			.isInstanceOf(BusinessException.class);
+
+		Counter counter = counters.get("comment.like.duplicate");
+		assertThat(counter).isNotNull();
+		verify(counter).increment();
+		verify(commentLikeRepository, never()).save(any());
 	}
 
 	private Article buildArticle(UUID articleId) {

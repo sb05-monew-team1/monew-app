@@ -54,6 +54,7 @@ import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.exception.UserNotFoundException;
 import com.codeit.monew.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -64,6 +65,15 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 @Slf4j
 public class ArticleService {
 
+	private static final String METRIC_ARTICLE_SEARCH_REQUESTS = "article.search.requests";
+	private static final String METRIC_ARTICLE_SEARCH_PAGINATION_FAILURES = "article.search.pageout.failures";
+	private static final String METRIC_ARTICLE_VIEW_SUCCESS = "article.view.register.success";
+	private static final String METRIC_ARTICLE_VIEW_DUPLICATE = "article.view.register.duplicate";
+	private static final String METRIC_ARTICLE_RESTORE_INVOCATIONS = "article.restore.invocations";
+	private static final String METRIC_ARTICLE_RESTORE_RESTORED = "article.restore.restored.count";
+	private static final String METRIC_ARTICLE_RESTORE_S3_FAILURES = "article.restore.s3.failures";
+	private static final String METRIC_ARTICLE_RESTORE_IO_FAILURES = "article.restore.io.failures";
+
 	private final ArticleRepository articleRepository;
 	private final PageResponseMapper pageResponseMapper;
 	private final UserRepository userRepository;
@@ -71,6 +81,7 @@ public class ArticleService {
 	private final InterestSubscriptionRepository interestSubscriptionRepository;
 	private final ArticleStorage articleStorage;
 	private final UserActivityService userActivityService;
+	private final MeterRegistry meterRegistry;
 
 	private final ObjectMapper objectMapper;
 	private final ArticleMapper articleMapper;
@@ -79,6 +90,7 @@ public class ArticleService {
 	@Transactional(readOnly = true)
 	public CursorPageResponse<ArticleDto> search(ArticleSearchRequest request) {
 		validateUser(request.userId());
+		meterRegistry.counter(METRIC_ARTICLE_SEARCH_REQUESTS).increment();
 
 		log.info("기사 검색 시작 userId={} orderBy={} direction={} cursor={} limit={}",
 			request.userId(), request.orderBy(), request.direction(), request.cursor(), request.limit());
@@ -105,6 +117,9 @@ public class ArticleService {
 			} else {
 				nextCursor = baseCursor;
 			}
+		}
+		if (slice.hasNext() && slice.getNumberOfElements() == 0) {
+			meterRegistry.counter(METRIC_ARTICLE_SEARCH_PAGINATION_FAILURES).increment();
 		}
 
 		long totalElements = articleRepository.count();
@@ -138,6 +153,7 @@ public class ArticleService {
 
 		if (articleViewRepository.existsByUserIdAndArticleId(userId, articleId)) {
 			log.info("이미 등록된 기사 뷰 articleId={} userId={}", articleId, userId);
+			meterRegistry.counter(METRIC_ARTICLE_VIEW_DUPLICATE).increment();
 			throw new ArticleViewAlreadyExistException().addDetail("articleId", articleId).addDetail("userId", userId);
 		}
 
@@ -150,6 +166,7 @@ public class ArticleService {
 
 		userActivityService.deleteUserActivity(user.getId());
 		log.debug("기사 뷰 등록 완료 articleViewId={} articleId={} userId={}", articleView.getId(), articleId, userId);
+		meterRegistry.counter(METRIC_ARTICLE_VIEW_SUCCESS).increment();
 
 		return dto;
 	}
@@ -189,6 +206,7 @@ public class ArticleService {
 		LocalDateTime restoreDate = LocalDateTime.now();
 
 		log.info("기사 백업 복원 시작 from={} to={}", from, to);
+		meterRegistry.counter(METRIC_ARTICLE_RESTORE_INVOCATIONS).increment();
 
 		List<UUID> restoredIds = new ArrayList<>();
 		Set<String> sourceUrls = articleRepository.findAllSourceUrls();
@@ -199,6 +217,7 @@ public class ArticleService {
 				stream = articleStorage.get(i.atZone(zone).format(DateTimeFormatter.ISO_LOCAL_DATE));
 			} catch (S3Exception e) {
 				log.warn("S3 백업 파일 불러오기 실패 date={}", i, e);
+				meterRegistry.counter(METRIC_ARTICLE_RESTORE_S3_FAILURES).increment();
 			}
 			if (stream == null) {
 				log.debug("백업 파일이 존재하지 않음 date={}", i);
@@ -208,10 +227,14 @@ public class ArticleService {
 			try {
 				articles = readBackup(stream, sourceUrls);
 			} catch (IOException e) {
+				meterRegistry.counter(METRIC_ARTICLE_RESTORE_IO_FAILURES).increment();
 				throw new StorageException(ErrorCode.ARTICLE_RESTORE_FAILED, e);
 			}
 			log.debug("기사 복원 처리 건수={} date={}", articles.size(), i);
 			articleRepository.saveAll(articles);
+			if (!articles.isEmpty()) {
+				meterRegistry.counter(METRIC_ARTICLE_RESTORE_RESTORED).increment(articles.size());
+			}
 			restoredIds.addAll(articles.stream().map(Article::getId).toList());
 		}
 

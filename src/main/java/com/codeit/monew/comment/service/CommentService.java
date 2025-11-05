@@ -30,6 +30,7 @@ import com.codeit.monew.notification.service.NotificationService;
 import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.repository.UserRepository;
 import com.querydsl.core.types.Order;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +44,11 @@ import lombok.extern.slf4j.Slf4j;
 @Transactional(readOnly = true)
 public class CommentService {
 
+	private static final String METRIC_COMMENT_CREATE_SUCCESS = "comment.create.success";
+	private static final String METRIC_COMMENT_ACTION_FORBIDDEN = "comment.action.forbidden";
+	private static final String METRIC_COMMENT_LIKE_SUCCESS = "comment.like.success";
+	private static final String METRIC_COMMENT_LIKE_DUPLICATE = "comment.like.duplicate";
+
 	private final CommentRepository commentRepository;
 	private final CommentLikeRepository commentLikeRepository;
 	private final UserRepository userRepository;
@@ -51,6 +57,7 @@ public class CommentService {
 	private final NotificationService notificationService;
 	private final PageResponseMapper pageResponseMapper;
 	private final UserActivityService userActivityService;
+	private final MeterRegistry meterRegistry;
 
 	/**
 	 * 댓글 등록
@@ -85,6 +92,7 @@ public class CommentService {
 		Comment savedComment = commentRepository.save(comment);
 
 		userActivityService.deleteUserActivity(user.getId());
+		meterRegistry.counter(METRIC_COMMENT_CREATE_SUCCESS).increment();
 
 		log.info("댓글 등록 완료 - commentId: {}", savedComment.getId());
 
@@ -113,6 +121,7 @@ public class CommentService {
 		if (!comment.getUser().getId().equals(requestUserId)) {
 			log.warn("댓글 수정 권한 없음 - commentId: {}, commentUserId: {}, requestUserId: {}",
 				commentId, comment.getUser().getId(), requestUserId);
+			meterRegistry.counter(METRIC_COMMENT_ACTION_FORBIDDEN).increment();
 			throw new BusinessException(ErrorCode.FORBIDDEN)
 				.addDetail("commentId", commentId)
 				.addDetail("requestUserId", requestUserId);
@@ -194,6 +203,7 @@ public class CommentService {
 		// 이미 좋아요를 눌렀는지 확인
 		if (commentLikeRepository.existsByCommentAndUser(comment, user)) {
 			log.warn("이미 좋아요를 누른 댓글 - commentId: {}, userId: {}", commentId, userId);
+			meterRegistry.counter(METRIC_COMMENT_LIKE_DUPLICATE).increment();
 			throw new BusinessException(ErrorCode.COMMENT_LIKE_ALREADY_EXISTS)
 				.addDetail("commentId", commentId)
 				.addDetail("userId", userId);
@@ -225,6 +235,7 @@ public class CommentService {
 
 		log.debug("사용자 활동 내역 mongoDB에서 삭제 - userId: {}", user.getId());
 		userActivityService.deleteUserActivity(user.getId());
+		meterRegistry.counter(METRIC_COMMENT_LIKE_SUCCESS).increment();
 
 		// 좋아요한 댓글 정보 반환 (likedByMe = true)
 		return commentMapper.toDto(comment, comment.getUser().getNickname(), true);
