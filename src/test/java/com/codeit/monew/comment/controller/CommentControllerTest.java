@@ -44,7 +44,7 @@ import com.codeit.monew.common.exception.ErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * CommentController 테스트
+ * CommentController 테스트 수정
  */
 @WebMvcTest(controllers = CommentController.class,
 	excludeFilters = {
