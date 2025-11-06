@@ -36,6 +36,7 @@ import com.codeit.monew.common.dto.CursorPageResponse;
 import com.codeit.monew.common.exception.BusinessException;
 import com.codeit.monew.common.exception.ErrorCode;
 import com.codeit.monew.common.util.PageResponseMapper;
+import com.codeit.monew.notification.domain.Notification;
 import com.codeit.monew.notification.service.NotificationService;
 import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.repository.UserRepository;
@@ -46,6 +47,9 @@ import java.util.List;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.junit.jupiter.api.BeforeEach;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -75,14 +79,23 @@ class CommentServiceTest {
 	@Mock
 	private UserActivityService userActivityService;
 
+	@Mock
+	private MeterRegistry meterRegistry;
+
 	@InjectMocks
 	private CommentService commentService;
+
+	@BeforeEach
+	void setUpMeterRegistry() {
+		Counter counter = mock(Counter.class);
+		when(meterRegistry.counter(anyString())).thenReturn(counter);
+		when(meterRegistry.counter(anyString(), any(String[].class))).thenReturn(counter);
+	}
 
 	@Nested
 	@DisplayName("댓글 등록 테스트")
 	class RegisterCommentTest {
 
-		@Disabled("TODO: 오류 부분 비활성화")
 		@Test
 		@DisplayName("댓글 등록 성공")
 		void registerComment_Success() {
@@ -243,7 +256,6 @@ class CommentServiceTest {
 			verify(commentRepository, times(1)).findById(commentId);
 		}
 
-		@Disabled("TODO: 오류 부분 비활성화")
 		@Test
 		@DisplayName("권한 없음 - 다른 사용자의 댓글 수정 시도")
 		void updateComment_Failure_Forbidden() {
@@ -370,7 +382,6 @@ class CommentServiceTest {
 	@DisplayName("댓글 좋아요 등록 테스트")
 	class LikeCommentTest {
 
-		@Disabled("TODO: 오류 부분 비활성화")
 		@Test
 		@DisplayName("댓글 좋아요 등록 성공")
 		void likeComment_Success() {
@@ -412,7 +423,7 @@ class CommentServiceTest {
 			when(commentLikeRepository.existsByCommentAndUser(comment, likeUser)).thenReturn(false);
 			when(commentLikeRepository.save(any(CommentLike.class))).thenReturn(commentLike);
 			when(commentMapper.toDto(any(Comment.class), anyString(), eq(true))).thenReturn(expectedDto);
-			doNothing().when(notificationService).create(any());
+			when(notificationService.create(any())).thenReturn(mock(Notification.class));
 			doNothing().when(userActivityService).deleteUserActivity(any(UUID.class));
 
 			// when
@@ -474,7 +485,6 @@ class CommentServiceTest {
 			verify(commentLikeRepository, never()).save(any());
 		}
 
-		@Disabled("TODO: 오류 부분 비활성화")
 		@Test
 		@DisplayName("중복 좋아요 - 예외 발생")
 		void likeComment_Failure_AlreadyLiked() {
