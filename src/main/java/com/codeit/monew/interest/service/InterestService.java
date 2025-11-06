@@ -40,6 +40,8 @@ import com.codeit.monew.interest.repository.InterestSubscriptionRepository;
 import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.repository.UserRepository;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Order;
+import com.querydsl.core.types.OrderSpecifier;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -168,7 +170,6 @@ public class InterestService {
 		Sort sort = Sort.by(new Sort.Order(direction, orderByField), new Sort.Order(direction, "createdAt"));
 
 		int pageSize = request.limit();
-		Pageable pageable = PageRequest.of(0, pageSize + 1, sort);
 
 		BooleanBuilder filterPredicate = new BooleanBuilder();
 		if (StringUtils.hasText(request.keyword())) {
@@ -261,11 +262,26 @@ public class InterestService {
 			log.debug("커서 로직 건너뜀 (첫 페이지 요청) - cursor: [{}], after: [{}]", request.cursor(), request.after());
 		}
 
-		List<Interest> interests = interestRepository.findAll(finalPredicate, pageable).getContent();
+		Order order = direction == Sort.Direction.ASC ? Order.ASC : Order.DESC;
+
+		OrderSpecifier<?> primaryOrder = switch (orderByField) {
+			case "name" -> new OrderSpecifier<>(order, interest.name);
+			case "subscriberCount" -> new OrderSpecifier<>(order, interest.subscriberCount);
+			default -> throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+		};
+		OrderSpecifier<?> secondaryOrder = new OrderSpecifier<>(order, interest.createdAt);
+		List<OrderSpecifier<?>> orderSpecifiers = List.of(primaryOrder, secondaryOrder);
+
+		List<Interest> interests = interestRepository.findAllWithOrders(
+			finalPredicate.getValue(),
+			orderSpecifiers,
+			pageSize + 1
+		);
 
 		boolean hasNext = interests.size() > pageSize;
 		List<Interest> content = hasNext ? interests.subList(0, pageSize) : interests;
-		Slice<Interest> slice = new SliceImpl<>(content, PageRequest.of(0, pageSize), hasNext);
+		Pageable slicePageable = PageRequest.of(0, pageSize, sort);
+		Slice<Interest> slice = new SliceImpl<>(content, slicePageable, hasNext);
 
 		List<InterestDto> dtos;
 		if (content.isEmpty()) {
