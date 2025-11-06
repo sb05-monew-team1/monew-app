@@ -6,7 +6,7 @@ spring:
     password: monew1234
   data:
     mongodb:
-      uri: mongodb://localhost:27017/monew
+      uri: ${SPRING_MONGODB_URL}
       port: 27017
       database: monew
   jpa:
