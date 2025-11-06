@@ -18,4 +18,25 @@ public record InterestSearchRequest(
 	@NotNull(message = "페이지 크기는 필수입니다.")
 	Integer limit
 ) {
+
+	public static InterestSearchRequest parseCursor(InterestSearchRequest r) {
+		String cursor = r.cursor;
+		String after = r.after;
+
+		if (after == null && cursor != null && cursor.contains("|")) {
+			String[] parts = cursor.split("\\|", 2);
+			cursor = parts[0];
+			if (parts.length > 1 && !parts[1].isBlank()) {
+				after = parts[1];
+			}
+		}
+		return new InterestSearchRequest(
+			r.keyword,
+			r.orderBy,
+			r.direction,
+			cursor,
+			after,
+			r.limit
+		);
+	}
 }

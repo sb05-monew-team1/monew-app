@@ -165,7 +165,7 @@ public class InterestService {
 
 		Sort.Direction direction =
 			"ASC".equalsIgnoreCase(request.direction()) ? Sort.Direction.ASC : Sort.Direction.DESC;
-		Sort sort = Sort.by(direction, orderByField).and(Sort.by(Sort.Direction.DESC, "createdAt"));
+		Sort sort = Sort.by(new Sort.Order(direction, orderByField), new Sort.Order(direction, "createdAt"));
 
 		int pageSize = request.limit();
 		Pageable pageable = PageRequest.of(0, pageSize + 1, sort);
@@ -199,7 +199,7 @@ public class InterestService {
 						String cursor = request.cursor();
 						if (direction == Sort.Direction.ASC) {
 							cursorBuilder.or(interest.name.gt(cursor));
-							cursorBuilder.or(interest.name.eq(cursor).and(interest.createdAt.lt(after)));
+							cursorBuilder.or(interest.name.eq(cursor).and(interest.createdAt.gt(after)));
 						} else {
 							cursorBuilder.or(interest.name.lt(cursor));
 							cursorBuilder.or(interest.name.eq(cursor).and(interest.createdAt.lt(after)));
@@ -212,7 +212,7 @@ public class InterestService {
 							if (direction == Sort.Direction.ASC) {
 								cursorBuilder.or(interest.subscriberCount.gt(cursorSubscriberCount));
 								cursorBuilder.or(interest.subscriberCount.eq(cursorSubscriberCount)
-									.and(interest.createdAt.lt(after)));
+									.and(interest.createdAt.gt(after)));
 							} else {
 								cursorBuilder.or(interest.subscriberCount.lt(cursorSubscriberCount));
 								cursorBuilder.or(interest.subscriberCount.eq(cursorSubscriberCount)
@@ -296,8 +296,9 @@ public class InterestService {
 				case "subscriberCount" -> lastInterest.getSubscriberCount();
 				default -> null;
 			};
-			nextCursor = String.valueOf(cursorValue);
+			String baseCursor = String.valueOf(cursorValue);
 			nextAfter = lastInterest.getCreatedAt().toString();
+			nextCursor = baseCursor + "|" + nextAfter;
 
 			log.debug("다음 페이지 커서 생성 - nextCursor: [{}], nextAfter: [{}]", nextCursor, nextAfter);
 		}
@@ -314,14 +315,10 @@ public class InterestService {
 		log.debug("관심사 구독 시작 - userId: {}, interestId: {}", userId, interestId);
 
 		User user = userRepository.findById(userId)
-			.orElseThrow(() -> {
-				return new BusinessException(ErrorCode.USER_NOT_FOUND);
-			});
+			.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
 		Interest interest = interestRepository.findById(interestId)
-			.orElseThrow(() -> {
-				return new BusinessException(ErrorCode.INTEREST_NOT_FOUND);
-			});
+			.orElseThrow(() -> new BusinessException(ErrorCode.INTEREST_NOT_FOUND));
 
 		if (interestSubscriptionRepository.existsByUserAndInterest(user, interest)) {
 			throw new BusinessException(ErrorCode.ALREADY_SUBSCRIBED);
