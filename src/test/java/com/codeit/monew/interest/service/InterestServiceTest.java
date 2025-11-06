@@ -15,6 +15,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -340,7 +341,7 @@ class InterestServiceTest {
 				.build();
 			List<Interest> interests = Arrays.asList(interest1, interest2);
 			Pageable pageable = PageRequest.of(0, 11,
-				Sort.by(Sort.Direction.ASC, "name").and(Sort.by(Sort.Direction.DESC, "createdAt")));
+				Sort.by(new Sort.Order(Sort.Direction.ASC, "name"), new Sort.Order(Sort.Direction.ASC, "createdAt")));
 			Page<Interest> interestPage = new PageImpl<>(interests, pageable, interests.size());
 
 			when(interestRepository.count(any(Predicate.class))).thenReturn(2L);
@@ -392,7 +393,7 @@ class InterestServiceTest {
 
 			List<Interest> interests = List.of(interest);
 			Pageable pageable = PageRequest.of(0, 11,
-				Sort.by(Sort.Direction.ASC, "name").and(Sort.by(Sort.Direction.DESC, "createdAt")));
+				Sort.by(new Sort.Order(Sort.Direction.ASC, "name"), new Sort.Order(Sort.Direction.ASC, "createdAt")));
 			Page<Interest> interestPage = new PageImpl<>(interests, pageable, interests.size());
 
 			when(interestRepository.count(any(Predicate.class))).thenReturn(1L);
@@ -435,7 +436,7 @@ class InterestServiceTest {
 			Page<Interest> emptyPage = new PageImpl<>(
 				List.of(),
 				PageRequest.of(0, 11,
-					Sort.by(Sort.Direction.ASC, "name").and(Sort.by(Sort.Direction.DESC, "createdAt"))),
+					Sort.by(new Sort.Order(Sort.Direction.ASC, "name"), new Sort.Order(Sort.Direction.ASC, "createdAt"))),
 				0
 			);
 
@@ -463,6 +464,74 @@ class InterestServiceTest {
 			assertEquals(0L, result.totalElements());
 			assertFalse(result.hasNext());
 			verify(interestRepository, times(1)).count(any(Predicate.class));
+		}
+
+		@Test
+		@DisplayName("정렬 방향이 ASC면 createdAt 정렬도 ASC로 설정된다")
+		void getInterests_SortDirectionAppliedToCreatedAtAsc() {
+			// given
+			UUID userId = UUID.randomUUID();
+			InterestSearchRequest request = new InterestSearchRequest(null, "name", "ASC", null, null, 5);
+
+			when(interestRepository.count(any(Predicate.class))).thenReturn(0L);
+			when(interestRepository.findAll(any(Predicate.class), any(Pageable.class)))
+				.thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 6), 0));
+			when(pageResponseMapper.toCursorPageResponse(any(Slice.class), any(), any(), anyLong()))
+				.thenReturn(CursorPageResponse.<InterestDto>builder()
+					.content(List.of())
+					.nextCursor(null)
+					.nextAfter(null)
+					.size(5)
+					.totalElements(0L)
+					.hasNext(false)
+					.build());
+
+			ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+			// when
+			interestService.getInterests(request, userId);
+
+			// then
+			verify(interestRepository).findAll(any(Predicate.class), pageableCaptor.capture());
+			Sort sort = pageableCaptor.getValue().getSort();
+			assertNotNull(sort.getOrderFor("name"));
+			assertEquals(Sort.Direction.ASC, sort.getOrderFor("name").getDirection());
+			assertNotNull(sort.getOrderFor("createdAt"));
+			assertEquals(Sort.Direction.ASC, sort.getOrderFor("createdAt").getDirection());
+		}
+
+		@Test
+		@DisplayName("정렬 방향이 DESC면 createdAt 정렬도 DESC로 설정된다")
+		void getInterests_SortDirectionAppliedToCreatedAtDesc() {
+			// given
+			UUID userId = UUID.randomUUID();
+			InterestSearchRequest request = new InterestSearchRequest(null, "subscriberCount", "DESC", null, null, 5);
+
+			when(interestRepository.count(any(Predicate.class))).thenReturn(0L);
+			when(interestRepository.findAll(any(Predicate.class), any(Pageable.class)))
+				.thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 6), 0));
+			when(pageResponseMapper.toCursorPageResponse(any(Slice.class), any(), any(), anyLong()))
+				.thenReturn(CursorPageResponse.<InterestDto>builder()
+					.content(List.of())
+					.nextCursor(null)
+					.nextAfter(null)
+					.size(5)
+					.totalElements(0L)
+					.hasNext(false)
+					.build());
+
+			ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+			// when
+			interestService.getInterests(request, userId);
+
+			// then
+			verify(interestRepository).findAll(any(Predicate.class), pageableCaptor.capture());
+			Sort sort = pageableCaptor.getValue().getSort();
+			assertNotNull(sort.getOrderFor("subscriberCount"));
+			assertEquals(Sort.Direction.DESC, sort.getOrderFor("subscriberCount").getDirection());
+			assertNotNull(sort.getOrderFor("createdAt"));
+			assertEquals(Sort.Direction.DESC, sort.getOrderFor("createdAt").getDirection());
 		}
 	}
 
