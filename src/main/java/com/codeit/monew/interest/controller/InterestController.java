@@ -84,8 +84,9 @@ public class InterestController {
 		@RequestHeader("Monew-Request-User-ID") UUID userId
 	) {
 		log.info("GET /api/interests");
+		InterestSearchRequest filtered = InterestSearchRequest.parseCursor(request);
 
-		CursorPageResponse<InterestDto> response = interestService.getInterests(request, userId);
+		CursorPageResponse<InterestDto> response = interestService.getInterests(filtered, userId);
 		return ResponseEntity.ok(response);
 	}
 
