@@ -30,6 +30,7 @@ import com.codeit.monew.notification.service.NotificationService;
 import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.repository.UserRepository;
 import com.querydsl.core.types.Order;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +44,11 @@ import lombok.extern.slf4j.Slf4j;
 @Transactional(readOnly = true)
 public class CommentService {
 
+	private static final String METRIC_COMMENT_CREATE_SUCCESS = "comment.create.success";
+	private static final String METRIC_COMMENT_ACTION_FORBIDDEN = "comment.action.forbidden";
+	private static final String METRIC_COMMENT_LIKE_SUCCESS = "comment.like.success";
+	private static final String METRIC_COMMENT_LIKE_DUPLICATE = "comment.like.duplicate";
+
 	private final CommentRepository commentRepository;
 	private final CommentLikeRepository commentLikeRepository;
 	private final UserRepository userRepository;
@@ -51,6 +57,7 @@ public class CommentService {
 	private final NotificationService notificationService;
 	private final PageResponseMapper pageResponseMapper;
 	private final UserActivityService userActivityService;
+	private final MeterRegistry meterRegistry;
 
 	/**
 	 * 댓글 등록
@@ -85,6 +92,7 @@ public class CommentService {
 		Comment savedComment = commentRepository.save(comment);
 
 		userActivityService.deleteUserActivity(user.getId());
+		meterRegistry.counter(METRIC_COMMENT_CREATE_SUCCESS).increment();
 
 		log.info("댓글 등록 완료 - commentId: {}", savedComment.getId());
 
@@ -113,6 +121,7 @@ public class CommentService {
 		if (!comment.getUser().getId().equals(requestUserId)) {
 			log.warn("댓글 수정 권한 없음 - commentId: {}, commentUserId: {}, requestUserId: {}",
 				commentId, comment.getUser().getId(), requestUserId);
+			meterRegistry.counter(METRIC_COMMENT_ACTION_FORBIDDEN).increment();
 			throw new BusinessException(ErrorCode.FORBIDDEN)
 				.addDetail("commentId", commentId)
 				.addDetail("requestUserId", requestUserId);
@@ -194,6 +203,7 @@ public class CommentService {
 		// 이미 좋아요를 눌렀는지 확인
 		if (commentLikeRepository.existsByCommentAndUser(comment, user)) {
 			log.warn("이미 좋아요를 누른 댓글 - commentId: {}, userId: {}", commentId, userId);
+			meterRegistry.counter(METRIC_COMMENT_LIKE_DUPLICATE).increment();
 			throw new BusinessException(ErrorCode.COMMENT_LIKE_ALREADY_EXISTS)
 				.addDetail("commentId", commentId)
 				.addDetail("userId", userId);
@@ -225,6 +235,7 @@ public class CommentService {
 
 		log.debug("사용자 활동 내역 mongoDB에서 삭제 - userId: {}", user.getId());
 		userActivityService.deleteUserActivity(user.getId());
+		meterRegistry.counter(METRIC_COMMENT_LIKE_SUCCESS).increment();
 
 		// 좋아요한 댓글 정보 반환 (likedByMe = true)
 		return commentMapper.toDto(comment, comment.getUser().getNickname(), true);
@@ -277,56 +288,9 @@ public class CommentService {
 		log.info("댓글 목록 조회 시작 - articleId: {}, orderBy: {}, direction: {}, cursor: {}, limit: {}",
 			request.articleId(), request.orderBy(), request.direction(), request.cursor(), request.limit());
 
-		// 기사 존재 확인
-		Article article = articleRepository.findById(request.articleId())
-			.orElseThrow(() -> new BusinessException(ErrorCode.ARTICLE_NOT_FOUND)
-				.addDetail("articleId", request.articleId()));
-
-		// 페이징 설정 (limit+1 조회로 hasNext 판단)
+		Article article = findArticleOrThrow(request);
 		Pageable pageable = PageRequest.of(0, request.limit() + 1);
-
-		// 댓글 목록 조회 (정렬 조건 및 방향에 따라)
-		Slice<Comment> commentSlice;
-		boolean isDesc = request.direction() == Order.DESC;
-
-		if (request.orderBy().equals("likeCount")) {
-			// 좋아요순 조회
-			Long likeCursor = null;
-			Instant dateCursor = null;
-			if (request.cursor() != null && !request.cursor().isEmpty()) {
-				String[] parts = request.cursor().split("_");
-				likeCursor = Long.parseLong(parts[0]);
-				dateCursor = Instant.parse(parts[1]);
-			}
-
-			if (isDesc) {
-				commentSlice = commentRepository.findByArticleAndNotDeletedOrderByLikesDesc(
-					article, likeCursor, dateCursor, pageable
-				);
-			} else {
-				commentSlice = commentRepository.findByArticleAndNotDeletedOrderByLikesAsc(
-					article, likeCursor, dateCursor, pageable
-				);
-			}
-		} else {
-			// 날짜순 조회 (기본값)
-			Instant dateCursor = (request.cursor() != null && !request.cursor().isEmpty())
-				? Instant.parse(request.cursor()) : null;
-
-			if (isDesc) {
-				commentSlice = (dateCursor == null)
-					? commentRepository.findByArticleAndDeletedAtIsNullOrderByCreatedAtDesc(article, pageable)
-					: commentRepository.findByArticleAndDeletedAtIsNullAndCreatedAtLessThanOrderByCreatedAtDesc(
-						article, dateCursor, pageable
-					);
-			} else {
-				commentSlice = (dateCursor == null)
-					? commentRepository.findByArticleAndDeletedAtIsNullOrderByCreatedAtAsc(article, pageable)
-					: commentRepository.findByArticleAndDeletedAtIsNullAndCreatedAtGreaterThanOrderByCreatedAtAsc(
-						article, dateCursor, pageable
-					);
-			}
-		}
+		Slice<Comment> commentSlice = fetchComments(request, article, pageable);
 
 		// 사용자 조회
 		User requestUser = userRepository.findById(request.monewRequestUserId())
@@ -342,27 +306,97 @@ public class CommentService {
 			return commentMapper.toDto(comment, comment.getUser().getNickname(), likedByMe);
 		});
 
-		// 다음 커서 생성
-		String nextCursor = null;
-		String nextAfter = null;
-
-		if (commentDtoSlice.hasNext() && commentDtoSlice.getNumberOfElements() > 0) {
-			CommentDto lastComment = commentDtoSlice.getContent().get(commentDtoSlice.getNumberOfElements() - 1);
-
-			nextAfter = String.valueOf(lastComment.createdAt());
-			if (request.orderBy().equals("likeCount")) {
-				// 좋아요순: likeCount_createdAt 형식
-				nextCursor = lastComment.likeCount() + "_" + lastComment.createdAt();
-			} else {
-				// 날짜순: createdAt만
-				nextCursor = nextAfter;
-			}
-		}
+		CursorData cursor = buildCursor(request, commentDtoSlice);
 
 		log.info("댓글 목록 조회 완료 - articleId: {}, 조회된 댓글 수: {}",
 			request.articleId(), commentDtoSlice.getNumberOfElements());
 
 		// CursorPageResponse 생성 (totalElements는 -1로 설정, 커서 페이지네이션에서는 전체 개수 불필요)
-		return pageResponseMapper.toCursorPageResponse(commentDtoSlice, nextCursor, nextAfter, -1);
+		return pageResponseMapper.toCursorPageResponse(commentDtoSlice, cursor.value(), cursor.after(), -1);
+	}
+
+	private Article findArticleOrThrow(CommentSearchRequest request) {
+		return articleRepository.findById(request.articleId())
+			.orElseThrow(() -> new BusinessException(ErrorCode.ARTICLE_NOT_FOUND)
+				.addDetail("articleId", request.articleId()));
+	}
+
+	private Slice<Comment> fetchComments(CommentSearchRequest request, Article article, Pageable pageable) {
+		boolean isDesc = request.direction() == Order.DESC;
+
+		if (isLikeOrder(request)) {
+			LikeCursor cursor = parseLikeCursor(request.cursor());
+			return isDesc
+				? commentRepository.findByArticleAndNotDeletedOrderByLikesDesc(
+				article, cursor.likeCount(), cursor.createdAt(), pageable)
+				: commentRepository.findByArticleAndNotDeletedOrderByLikesAsc(
+				article, cursor.likeCount(), cursor.createdAt(), pageable);
+		}
+
+		Instant createdAtCursor = parseCreatedAtCursor(request.cursor());
+		return isDesc
+			? fetchDescendingByDate(article, createdAtCursor, pageable)
+			: fetchAscendingByDate(article, createdAtCursor, pageable);
+	}
+
+	private Slice<Comment> fetchDescendingByDate(Article article, Instant cursor, Pageable pageable) {
+		return cursor == null
+			? commentRepository.findByArticleAndDeletedAtIsNullOrderByCreatedAtDesc(article, pageable)
+			: commentRepository.findByArticleAndDeletedAtIsNullAndCreatedAtLessThanOrderByCreatedAtDesc(
+			article, cursor, pageable);
+	}
+
+	private Slice<Comment> fetchAscendingByDate(Article article, Instant cursor, Pageable pageable) {
+		return cursor == null
+			? commentRepository.findByArticleAndDeletedAtIsNullOrderByCreatedAtAsc(article, pageable)
+			: commentRepository.findByArticleAndDeletedAtIsNullAndCreatedAtGreaterThanOrderByCreatedAtAsc(
+			article, cursor, pageable);
+	}
+
+	private boolean isLikeOrder(CommentSearchRequest request) {
+		return "likeCount".equals(request.orderBy());
+	}
+
+	private LikeCursor parseLikeCursor(String rawCursor) {
+		if (rawCursor == null || rawCursor.isBlank()) {
+			return LikeCursor.empty();
+		}
+		String[] parts = rawCursor.split("_");
+		long likeCursor = Long.parseLong(parts[0]);
+		Instant createdAtCursor = Instant.parse(parts[1]);
+		return new LikeCursor(likeCursor, createdAtCursor);
+	}
+
+	private Instant parseCreatedAtCursor(String rawCursor) {
+		return (rawCursor == null || rawCursor.isBlank()) ? null : Instant.parse(rawCursor);
+	}
+
+	private CursorData buildCursor(CommentSearchRequest request, Slice<CommentDto> commentDtoSlice) {
+		if (!commentDtoSlice.hasNext() || commentDtoSlice.getNumberOfElements() == 0) {
+			return CursorData.empty();
+		}
+
+		CommentDto lastComment = commentDtoSlice.getContent()
+			.get(commentDtoSlice.getNumberOfElements() - 1);
+		String nextAfter = String.valueOf(lastComment.createdAt());
+
+		if (!isLikeOrder(request)) {
+			return new CursorData(nextAfter, nextAfter);
+		}
+
+		String nextCursor = lastComment.likeCount() + "_" + lastComment.createdAt();
+		return new CursorData(nextCursor, nextAfter);
+	}
+
+	private record CursorData(String value, String after) {
+		private static CursorData empty() {
+			return new CursorData(null, null);
+		}
+	}
+
+	private record LikeCursor(Long likeCount, Instant createdAt) {
+		private static LikeCursor empty() {
+			return new LikeCursor(null, null);
+		}
 	}
 }

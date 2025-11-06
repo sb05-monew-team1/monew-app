@@ -12,7 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.codeit.monew.comment.repository.CommentRepository;
 import com.codeit.monew.comment.service.CommentService;
 import com.codeit.monew.notification.domain.Notification;
 import com.codeit.monew.notification.dto.NotificationCreateRequest;

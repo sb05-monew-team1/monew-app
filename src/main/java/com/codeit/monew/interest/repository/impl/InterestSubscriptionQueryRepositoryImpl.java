@@ -48,7 +48,7 @@ public class InterestSubscriptionQueryRepositoryImpl implements InterestSubscrip
 			.map(t -> t.get(i.id))
 			.toList();
 
-		if(interestIds.isEmpty()) {
+		if (interestIds.isEmpty()) {
 			return Collections.emptyList();
 		}
 

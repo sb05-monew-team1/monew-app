@@ -21,6 +21,18 @@ management:
   metrics:
     tags:
       application: app
+    export:
+      cloudwatch:
+        enabled: ${CLOUDWATCH_METRICS_ENABLED:false}
+        namespace: ${CLOUDWATCH_NAMESPACE:monew/app}
+        region: ${AWS_CLOUDWATCH_REGION:${AWS_S3_REGION}}
+        step: 1m
 
 server:
   port: 8080 # app / 8081 # batch
+  servlet:
+    session:
+      cookie:
+        same-site: Lax
+        http-only: true
+        secure: false

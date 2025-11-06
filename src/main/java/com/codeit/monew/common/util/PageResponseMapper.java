@@ -8,7 +8,8 @@ import com.codeit.monew.common.dto.CursorPageResponse;
 @Mapper(componentModel = "spring")
 public interface PageResponseMapper {
 
-	default <T> CursorPageResponse<T> toCursorPageResponse(Slice<T> slice, Object nextCursor, Object nextAfter, long totalElements) {
+	default <T> CursorPageResponse<T> toCursorPageResponse(Slice<T> slice, Object nextCursor, Object nextAfter,
+		long totalElements) {
 
 		return CursorPageResponse.<T>builder()
 			.content(slice.getContent())

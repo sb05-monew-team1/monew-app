@@ -11,11 +11,19 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,10 +48,13 @@ import com.codeit.monew.common.dto.CursorPageResponse;
 import com.codeit.monew.common.exception.ErrorCode;
 import com.codeit.monew.common.exception.storage.StorageException;
 import com.codeit.monew.common.util.PageResponseMapper;
+import com.codeit.monew.interest.dto.SubscriptionDto;
+import com.codeit.monew.interest.repository.InterestSubscriptionRepository;
 import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.exception.UserNotFoundException;
 import com.codeit.monew.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,28 +65,41 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 @Slf4j
 public class ArticleService {
 
+	private static final String METRIC_ARTICLE_SEARCH_REQUESTS = "article.search.requests";
+	private static final String METRIC_ARTICLE_SEARCH_PAGINATION_FAILURES = "article.search.pageout.failures";
+	private static final String METRIC_ARTICLE_VIEW_SUCCESS = "article.view.register.success";
+	private static final String METRIC_ARTICLE_VIEW_DUPLICATE = "article.view.register.duplicate";
+	private static final String METRIC_ARTICLE_RESTORE_INVOCATIONS = "article.restore.invocations";
+	private static final String METRIC_ARTICLE_RESTORE_RESTORED = "article.restore.restored.count";
+	private static final String METRIC_ARTICLE_RESTORE_S3_FAILURES = "article.restore.s3.failures";
+	private static final String METRIC_ARTICLE_RESTORE_IO_FAILURES = "article.restore.io.failures";
+
 	private final ArticleRepository articleRepository;
 	private final PageResponseMapper pageResponseMapper;
 	private final UserRepository userRepository;
 	private final ArticleViewRepository articleViewRepository;
+	private final InterestSubscriptionRepository interestSubscriptionRepository;
 	private final ArticleStorage articleStorage;
 	private final UserActivityService userActivityService;
-	private final ObjectMapper objectMapper;
+	private final MeterRegistry meterRegistry;
 
+	private final ObjectMapper objectMapper;
 	private final ArticleMapper articleMapper;
 	private final ArticleViewMapper articleViewMapper;
 
 	@Transactional(readOnly = true)
 	public CursorPageResponse<ArticleDto> search(ArticleSearchRequest request) {
-		validateUser(request.monewRequestUserId());
+		validateUser(request.userId());
+		meterRegistry.counter(METRIC_ARTICLE_SEARCH_REQUESTS).increment();
 
 		log.info("기사 검색 시작 userId={} orderBy={} direction={} cursor={} limit={}",
-			request.monewRequestUserId(), request.orderBy(), request.direction(), request.cursor(), request.limit());
+			request.userId(), request.orderBy(), request.direction(), request.cursor(), request.limit());
 
 		ArticleSearchRequestFromService serviceRequest = ArticleSearchRequestFromService.from(request);
 
 		ArticleSearchResultDto search = articleRepository.search(serviceRequest);
-		Slice<ArticleDto> slice = search.slice();
+		List<String> interestKeywords = findInterestKeywords(request.userId(), request.interestId());
+		Slice<ArticleDto> slice = highlightArticles(search.slice(), interestKeywords);
 		String nextCursor = null;
 		Instant nextAfter = null;
 
@@ -94,10 +118,13 @@ public class ArticleService {
 				nextCursor = baseCursor;
 			}
 		}
+		if (slice.hasNext() && slice.getNumberOfElements() == 0) {
+			meterRegistry.counter(METRIC_ARTICLE_SEARCH_PAGINATION_FAILURES).increment();
+		}
 
 		long totalElements = articleRepository.count();
 		log.debug("기사 검색 완료 userId={} 결과수={} 다음페이지여부={} nextCursor={} 전체건수={}",
-			request.monewRequestUserId(), slice.getNumberOfElements(), slice.hasNext(), nextCursor, totalElements);
+			request.userId(), slice.getNumberOfElements(), slice.hasNext(), nextCursor, totalElements);
 
 		return pageResponseMapper.toCursorPageResponse(slice, nextCursor, nextAfter, totalElements);
 	}
@@ -108,11 +135,13 @@ public class ArticleService {
 
 		Article article = validateArticle(articleId);
 		validateUser(userId);
+		List<String> interestKeywords = findInterestKeywords(userId, null);
 
 		boolean viewedByMe = articleViewRepository.existsByUserIdAndArticleId(userId, articleId);
 		log.debug("기사 단건 조회 결과 articleId={} viewedByMe={}", articleId, viewedByMe);
 
-		return articleMapper.toArticleDto(article, viewedByMe);
+		ArticleDto articleDto = articleMapper.toArticleDto(article, viewedByMe);
+		return highlightArticle(articleDto, interestKeywords);
 	}
 
 	@Transactional
@@ -124,6 +153,7 @@ public class ArticleService {
 
 		if (articleViewRepository.existsByUserIdAndArticleId(userId, articleId)) {
 			log.info("이미 등록된 기사 뷰 articleId={} userId={}", articleId, userId);
+			meterRegistry.counter(METRIC_ARTICLE_VIEW_DUPLICATE).increment();
 			throw new ArticleViewAlreadyExistException().addDetail("articleId", articleId).addDetail("userId", userId);
 		}
 
@@ -136,6 +166,7 @@ public class ArticleService {
 
 		userActivityService.deleteUserActivity(user.getId());
 		log.debug("기사 뷰 등록 완료 articleViewId={} articleId={} userId={}", articleView.getId(), articleId, userId);
+		meterRegistry.counter(METRIC_ARTICLE_VIEW_SUCCESS).increment();
 
 		return dto;
 	}
@@ -175,6 +206,7 @@ public class ArticleService {
 		LocalDateTime restoreDate = LocalDateTime.now();
 
 		log.info("기사 백업 복원 시작 from={} to={}", from, to);
+		meterRegistry.counter(METRIC_ARTICLE_RESTORE_INVOCATIONS).increment();
 
 		List<UUID> restoredIds = new ArrayList<>();
 		Set<String> sourceUrls = articleRepository.findAllSourceUrls();
@@ -185,6 +217,7 @@ public class ArticleService {
 				stream = articleStorage.get(i.atZone(zone).format(DateTimeFormatter.ISO_LOCAL_DATE));
 			} catch (S3Exception e) {
 				log.warn("S3 백업 파일 불러오기 실패 date={}", i, e);
+				meterRegistry.counter(METRIC_ARTICLE_RESTORE_S3_FAILURES).increment();
 			}
 			if (stream == null) {
 				log.debug("백업 파일이 존재하지 않음 date={}", i);
@@ -194,10 +227,14 @@ public class ArticleService {
 			try {
 				articles = readBackup(stream, sourceUrls);
 			} catch (IOException e) {
+				meterRegistry.counter(METRIC_ARTICLE_RESTORE_IO_FAILURES).increment();
 				throw new StorageException(ErrorCode.ARTICLE_RESTORE_FAILED, e);
 			}
 			log.debug("기사 복원 처리 건수={} date={}", articles.size(), i);
 			articleRepository.saveAll(articles);
+			if (!articles.isEmpty()) {
+				meterRegistry.counter(METRIC_ARTICLE_RESTORE_RESTORED).increment(articles.size());
+			}
 			restoredIds.addAll(articles.stream().map(Article::getId).toList());
 		}
 
@@ -253,5 +290,113 @@ public class ArticleService {
 			}
 			return restored;
 		}
+	}
+
+	private List<String> findInterestKeywords(UUID userId, UUID interestId) {
+		List<SubscriptionDto> subscriptions = interestSubscriptionRepository.searchSubsCription(userId);
+		if (subscriptions == null || subscriptions.isEmpty()) {
+			return List.of();
+		}
+
+		LinkedHashSet<String> distinctKeywords = subscriptions.stream()
+			.filter(Objects::nonNull)
+			.filter(subscription -> matchesInterest(subscription, interestId))
+			.flatMap(this::keywordStream)
+			.map(String::trim)
+			.filter(keyword -> !keyword.isEmpty())
+			.collect(Collectors.toCollection(LinkedHashSet::new));
+
+		if (distinctKeywords.isEmpty()) {
+			return List.of();
+		}
+
+		return distinctKeywords.stream()
+			.sorted(Comparator.comparingInt(String::length).reversed())
+			.toList();
+	}
+
+	private boolean matchesInterest(SubscriptionDto subscription, UUID interestId) {
+		return interestId == null || interestId.equals(subscription.interestId());
+	}
+
+	private Stream<String> keywordStream(SubscriptionDto subscription) {
+		List<String> keywords = subscription.interestKeywords();
+		return keywords == null ? Stream.empty() : keywords.stream();
+	}
+
+	private Slice<ArticleDto> highlightArticles(Slice<ArticleDto> slice, List<String> keywords) {
+		if (slice == null || keywords.isEmpty() || !slice.hasContent()) {
+			return slice;
+		}
+
+		List<ArticleDto> highlighted = slice.getContent().stream()
+			.map(article -> highlightArticle(article, keywords))
+			.toList();
+
+		return new SliceImpl<>(highlighted, slice.getPageable(), slice.hasNext());
+	}
+
+	private ArticleDto highlightArticle(ArticleDto article, List<String> keywords) {
+		if (article == null || keywords.isEmpty()) {
+			return article;
+		}
+
+		String highlightedTitle = highlightText(article.title(), keywords);
+		String highlightedSummary = highlightText(article.summary(), keywords);
+
+		return new ArticleDto(
+			article.id(),
+			article.source(),
+			article.sourceUrl(),
+			highlightedTitle,
+			article.publishDate(),
+			highlightedSummary,
+			article.commentCount(),
+			article.viewCount(),
+			article.viewedByMe()
+		);
+	}
+
+	private String highlightText(String text, List<String> keywords) {
+		if (text == null || text.isBlank() || keywords.isEmpty()) {
+			return text;
+		}
+
+		String result = text;
+		for (String keyword : keywords) {
+			result = highlightKeyword(result, keyword);
+		}
+		return result;
+	}
+
+	private String highlightKeyword(String text, String keyword) {
+		if (keyword == null || keyword.isBlank()) {
+			return text;
+		}
+
+		Pattern pattern = Pattern.compile(Pattern.quote(keyword), Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+		Matcher matcher = pattern.matcher(text);
+		StringBuilder sb = new StringBuilder();
+
+		while (matcher.find()) {
+			String replacement = matcher.group();
+			if (!isWithinExistingBold(matcher.start(), text)) {
+				replacement = "<b>" + replacement + "</b>";
+			}
+			matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
+		}
+		matcher.appendTail(sb);
+		return sb.toString();
+	}
+
+	private boolean isWithinExistingBold(int matchStart, String text) {
+		int lastOpenB = text.lastIndexOf("<b>", matchStart);
+		int lastCloseB = text.lastIndexOf("</b>", matchStart);
+		if (lastOpenB != -1 && (lastCloseB == -1 || lastOpenB > lastCloseB)) {
+			return true;
+		}
+		int lastOpenStrong = text.lastIndexOf("<strong>", matchStart);
+		int lastCloseStrong = text.lastIndexOf("</strong>", matchStart);
+		return lastOpenStrong != -1 && (lastCloseStrong == -1 || lastOpenStrong > lastCloseStrong);
 	}
 }

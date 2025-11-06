@@ -13,7 +13,8 @@ import com.codeit.monew.interest.domain.Interest;
 import com.codeit.monew.interest.domain.InterestSubscription;
 import com.codeit.monew.user.domain.User;
 
-public interface InterestSubscriptionRepository extends JpaRepository<InterestSubscription, UUID>, InterestSubscriptionQueryRepository {
+public interface InterestSubscriptionRepository
+	extends JpaRepository<InterestSubscription, UUID>, InterestSubscriptionQueryRepository {
 	@Query("SELECT s.interest.id FROM InterestSubscription s WHERE s.user.id = :userId AND s.interest.id IN :interestIds")
 	Set<UUID> findInterestIdsByUserIdAndInterestIdsIn(@Param("userId") UUID userId,
 		@Param("interestIds") List<UUID> interestIds);
