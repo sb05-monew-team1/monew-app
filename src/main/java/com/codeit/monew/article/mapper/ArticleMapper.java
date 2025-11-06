@@ -9,7 +9,16 @@ import com.codeit.monew.article.dto.ArticleDto;
 @Mapper(componentModel = "spring")
 public interface ArticleMapper {
 
-	@Mapping(target = "commentCount", expression = "java((long) article.getComments().size())")
+	@Mapping(target = "commentCount", expression = "java(countActiveComments(article))")
 	@Mapping(target = "viewCount", expression = "java((long) article.getArticleViews().size())")
 	ArticleDto toArticleDto(Article article, boolean viewedByMe);
+
+	default long countActiveComments(Article article) {
+		if (article == null || article.getComments() == null) {
+			return 0L;
+		}
+		return article.getComments().stream()
+			.filter(comment -> comment.getDeletedAt() == null)
+			.count();
+	}
 }

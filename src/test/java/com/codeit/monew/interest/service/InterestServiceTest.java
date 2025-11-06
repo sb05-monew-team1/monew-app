@@ -15,15 +15,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
-import org.springframework.data.domain.Sort;
 
 import com.codeit.monew.activity.service.UserActivityService;
 import com.codeit.monew.common.dto.CursorPageResponse;
@@ -43,6 +39,8 @@ import com.codeit.monew.interest.repository.InterestRepository;
 import com.codeit.monew.interest.repository.InterestSubscriptionRepository;
 import com.codeit.monew.user.domain.User;
 import com.codeit.monew.user.repository.UserRepository;
+import com.querydsl.core.types.Order;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Predicate;
 
 @ExtendWith(MockitoExtension.class)
@@ -310,6 +308,7 @@ class InterestServiceTest {
 		}
 	}
 
+
 	@Nested
 	@DisplayName("관심사 목록 조회 테스트")
 	class GetInterestsTest {
@@ -339,13 +338,10 @@ class InterestServiceTest {
 				.keywords(new ArrayList<>())
 				.build();
 			List<Interest> interests = Arrays.asList(interest1, interest2);
-			Pageable pageable = PageRequest.of(0, 11,
-				Sort.by(Sort.Direction.ASC, "name").and(Sort.by(Sort.Direction.DESC, "createdAt")));
-			Page<Interest> interestPage = new PageImpl<>(interests, pageable, interests.size());
 
 			when(interestRepository.count(any(Predicate.class))).thenReturn(2L);
-			when(interestRepository.findAll(any(Predicate.class), any(Pageable.class)))
-				.thenReturn(interestPage);
+			when(interestRepository.findAllWithOrders(any(), anyList(), anyInt()))
+				.thenReturn(interests);
 			when(interestSubscriptionRepository.findInterestIdsByUserIdAndInterestIdsIn(any(), any()))
 				.thenReturn(new HashSet<>());
 
@@ -372,7 +368,7 @@ class InterestServiceTest {
 			assertEquals(2L, result.totalElements());
 			assertFalse(result.hasNext());
 			verify(interestRepository, times(1)).count(any(Predicate.class));
-			verify(interestRepository, times(1)).findAll(any(Predicate.class), any(Pageable.class));
+			verify(interestRepository, times(1)).findAllWithOrders(any(), anyList(), anyInt());
 			verify(interestSubscriptionRepository, times(1))
 				.findInterestIdsByUserIdAndInterestIdsIn(eq(userId), any());
 		}
@@ -391,13 +387,10 @@ class InterestServiceTest {
 				.build();
 
 			List<Interest> interests = List.of(interest);
-			Pageable pageable = PageRequest.of(0, 11,
-				Sort.by(Sort.Direction.ASC, "name").and(Sort.by(Sort.Direction.DESC, "createdAt")));
-			Page<Interest> interestPage = new PageImpl<>(interests, pageable, interests.size());
 
 			when(interestRepository.count(any(Predicate.class))).thenReturn(1L);
-			when(interestRepository.findAll(any(Predicate.class), any(Pageable.class)))
-				.thenReturn(interestPage);
+			when(interestRepository.findAllWithOrders(any(), anyList(), anyInt()))
+				.thenReturn(interests);
 			when(interestSubscriptionRepository.findInterestIdsByUserIdAndInterestIdsIn(any(), any()))
 				.thenReturn(new HashSet<>());
 
@@ -422,7 +415,7 @@ class InterestServiceTest {
 			assertEquals(1, result.content().size());
 			assertEquals(1L, result.totalElements());
 			verify(interestRepository, times(1)).count(any(Predicate.class));
-			verify(interestRepository, times(1)).findAll(any(Predicate.class), any(Pageable.class));
+			verify(interestRepository, times(1)).findAllWithOrders(any(), anyList(), anyInt());
 		}
 
 		@Test
@@ -432,16 +425,9 @@ class InterestServiceTest {
 			UUID userId = UUID.randomUUID();
 			InterestSearchRequest request = new InterestSearchRequest(null, "name", "ASC", null, null, 10);
 
-			Page<Interest> emptyPage = new PageImpl<>(
-				List.of(),
-				PageRequest.of(0, 11,
-					Sort.by(Sort.Direction.ASC, "name").and(Sort.by(Sort.Direction.DESC, "createdAt"))),
-				0
-			);
-
 			when(interestRepository.count(any(Predicate.class))).thenReturn(0L);
-			when(interestRepository.findAll(any(Predicate.class), any(Pageable.class)))
-				.thenReturn(emptyPage);
+			when(interestRepository.findAllWithOrders(any(), anyList(), anyInt()))
+				.thenReturn(List.of());
 
 			CursorPageResponse<InterestDto> expectedResponse = CursorPageResponse.<InterestDto>builder()
 				.content(List.of())
@@ -463,6 +449,150 @@ class InterestServiceTest {
 			assertEquals(0L, result.totalElements());
 			assertFalse(result.hasNext());
 			verify(interestRepository, times(1)).count(any(Predicate.class));
+		}
+
+		@Test
+		@DisplayName("정렬 방향이 ASC면 createdAt 정렬도 ASC로 설정된다")
+		void getInterests_SortDirectionAppliedToCreatedAtAsc() {
+			// given
+			UUID userId = UUID.randomUUID();
+			InterestSearchRequest request = new InterestSearchRequest(null, "name", "ASC", null, null, 5);
+
+			when(interestRepository.count(any(Predicate.class))).thenReturn(0L);
+			when(interestRepository.findAllWithOrders(any(), anyList(), anyInt()))
+				.thenReturn(List.of());
+			when(pageResponseMapper.toCursorPageResponse(any(Slice.class), any(), any(), anyLong()))
+				.thenReturn(CursorPageResponse.<InterestDto>builder()
+					.content(List.of())
+					.nextCursor(null)
+					.nextAfter(null)
+					.size(5)
+					.totalElements(0L)
+					.hasNext(false)
+					.build());
+
+			ArgumentCaptor<List> orderCaptor = ArgumentCaptor.forClass(List.class);
+
+			// when
+			interestService.getInterests(request, userId);
+
+			// then
+			verify(interestRepository).findAllWithOrders(any(), orderCaptor.capture(), eq(6));
+			@SuppressWarnings("unchecked")
+			List<OrderSpecifier<?>> orders = orderCaptor.getValue();
+			assertEquals(2, orders.size());
+			assertEquals(Order.ASC, orders.get(0).getOrder());
+			assertTrue(orders.get(0).toString().contains("interest.name"));
+			assertEquals(Order.ASC, orders.get(1).getOrder());
+			assertTrue(orders.get(1).toString().contains("interest.createdAt"));
+		}
+
+		@Test
+		@DisplayName("정렬 방향이 DESC면 name 정렬과 createdAt 정렬이 모두 DESC로 설정된다")
+		void getInterests_SortDirectionAppliedToCreatedAtDescForName() {
+			// given
+			UUID userId = UUID.randomUUID();
+			InterestSearchRequest request = new InterestSearchRequest(null, "name", "DESC", null, null, 5);
+
+			when(interestRepository.count(any(Predicate.class))).thenReturn(0L);
+			when(interestRepository.findAllWithOrders(any(), anyList(), anyInt()))
+				.thenReturn(List.of());
+			when(pageResponseMapper.toCursorPageResponse(any(Slice.class), any(), any(), anyLong()))
+				.thenReturn(CursorPageResponse.<InterestDto>builder()
+					.content(List.of())
+					.nextCursor(null)
+					.nextAfter(null)
+					.size(5)
+					.totalElements(0L)
+					.hasNext(false)
+					.build());
+
+			ArgumentCaptor<List> orderCaptor = ArgumentCaptor.forClass(List.class);
+
+			// when
+			interestService.getInterests(request, userId);
+
+			// then
+			verify(interestRepository).findAllWithOrders(any(), orderCaptor.capture(), eq(6));
+			@SuppressWarnings("unchecked")
+			List<OrderSpecifier<?>> orders = orderCaptor.getValue();
+			assertEquals(2, orders.size());
+			assertEquals(Order.DESC, orders.get(0).getOrder());
+			assertTrue(orders.get(0).toString().contains("interest.name"));
+			assertEquals(Order.DESC, orders.get(1).getOrder());
+			assertTrue(orders.get(1).toString().contains("interest.createdAt"));
+		}
+
+		@Test
+		@DisplayName("정렬 방향이 DESC면 createdAt 정렬도 DESC로 설정된다")
+		void getInterests_SortDirectionAppliedToCreatedAtDesc() {
+			// given
+			UUID userId = UUID.randomUUID();
+			InterestSearchRequest request = new InterestSearchRequest(null, "subscriberCount", "DESC", null, null, 5);
+
+			when(interestRepository.count(any(Predicate.class))).thenReturn(0L);
+			when(interestRepository.findAllWithOrders(any(), anyList(), anyInt()))
+				.thenReturn(List.of());
+			when(pageResponseMapper.toCursorPageResponse(any(Slice.class), any(), any(), anyLong()))
+				.thenReturn(CursorPageResponse.<InterestDto>builder()
+					.content(List.of())
+					.nextCursor(null)
+					.nextAfter(null)
+					.size(5)
+					.totalElements(0L)
+					.hasNext(false)
+					.build());
+
+			ArgumentCaptor<List> orderCaptor = ArgumentCaptor.forClass(List.class);
+
+			// when
+			interestService.getInterests(request, userId);
+
+			// then
+			verify(interestRepository).findAllWithOrders(any(), orderCaptor.capture(), eq(6));
+			@SuppressWarnings("unchecked")
+			List<OrderSpecifier<?>> orders = orderCaptor.getValue();
+			assertEquals(2, orders.size());
+			assertEquals(Order.DESC, orders.get(0).getOrder());
+			assertTrue(orders.get(0).toString().contains("interest.subscriberCount"));
+			assertEquals(Order.DESC, orders.get(1).getOrder());
+			assertTrue(orders.get(1).toString().contains("interest.createdAt"));
+		}
+
+		@Test
+		@DisplayName("subscriberCount 정렬이 ASC면 createdAt 정렬도 ASC다")
+		void getInterests_SortDirectionAppliedToCreatedAtAscForSubscriberCount() {
+			// given
+			UUID userId = UUID.randomUUID();
+			InterestSearchRequest request = new InterestSearchRequest(null, "subscriberCount", "ASC", null, null, 5);
+
+			when(interestRepository.count(any(Predicate.class))).thenReturn(0L);
+			when(interestRepository.findAllWithOrders(any(), anyList(), anyInt()))
+				.thenReturn(List.of());
+			when(pageResponseMapper.toCursorPageResponse(any(Slice.class), any(), any(), anyLong()))
+				.thenReturn(CursorPageResponse.<InterestDto>builder()
+					.content(List.of())
+					.nextCursor(null)
+					.nextAfter(null)
+					.size(5)
+					.totalElements(0L)
+					.hasNext(false)
+					.build());
+
+			ArgumentCaptor<List> orderCaptor = ArgumentCaptor.forClass(List.class);
+
+			// when
+			interestService.getInterests(request, userId);
+
+			// then
+			verify(interestRepository).findAllWithOrders(any(), orderCaptor.capture(), eq(6));
+			@SuppressWarnings("unchecked")
+			List<OrderSpecifier<?>> orders = orderCaptor.getValue();
+			assertEquals(2, orders.size());
+			assertEquals(Order.ASC, orders.get(0).getOrder());
+			assertTrue(orders.get(0).toString().contains("interest.subscriberCount"));
+			assertEquals(Order.ASC, orders.get(1).getOrder());
+			assertTrue(orders.get(1).toString().contains("interest.createdAt"));
 		}
 	}
 

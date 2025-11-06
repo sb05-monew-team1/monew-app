@@ -77,7 +77,7 @@ public class ArticleQueryRepositoryImpl implements ArticleQueryRepository {
 			)
 			.from(a)
 			.distinct()
-			.leftJoin(a.comments, c)
+			.leftJoin(a.comments, c).on(c.deletedAt.isNull())
 			.leftJoin(a.articleViews, articleView)
 			.where(builder)
 			.groupBy(a.id, a.source, a.sourceUrl, a.title, a.publishDate, a.summary, a.createdAt);

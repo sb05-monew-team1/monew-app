@@ -9,7 +9,8 @@ import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 
 import com.codeit.monew.interest.domain.Interest;
 
-public interface InterestRepository extends JpaRepository<Interest, UUID>, QuerydslPredicateExecutor<Interest> {
+public interface InterestRepository
+	extends JpaRepository<Interest, UUID>, QuerydslPredicateExecutor<Interest>, InterestQueryRepository {
 	@Query("SELECT i.name FROM Interest i")
 	List<String> findAllNames();
 }
