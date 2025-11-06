@@ -60,4 +60,22 @@ class InterestSearchRequestTest {
 		assertEquals("foo", result.cursor());
 		assertNull(result.after());
 	}
+
+	@Test
+	@DisplayName("커서 문자열의 after 부분이 비어 있으면 after 는 그대로 null 이다")
+	void parseCursor_BlankAfterPart() {
+		InterestSearchRequest request = new InterestSearchRequest(
+			null,
+			"name",
+			"ASC",
+			"foo|",
+			null,
+			10
+		);
+
+		InterestSearchRequest result = InterestSearchRequest.parseCursor(request);
+
+		assertEquals("foo", result.cursor());
+		assertNull(result.after());
+	}
 }
